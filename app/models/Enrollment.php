@@ -1,0 +1,81 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Models;
+
+use App\Core\Model;
+use PDO;
+
+class Enrollment extends Model
+{
+    public function create(int $userId, int $courseId): int
+    {
+        $stmt = $this->db->prepare('INSERT INTO enrollments (user_id, course_id, status, created_at, updated_at) VALUES (:user_id, :course_id, :status, NOW(), NOW())');
+        $stmt->execute([
+            'user_id' => $userId,
+            'course_id' => $courseId,
+            'status' => 'enrolled',
+        ]);
+        return (int)$this->db->lastInsertId();
+    }
+
+    public function exists(int $userId, int $courseId): bool
+    {
+        $stmt = $this->db->prepare('SELECT id FROM enrollments WHERE user_id = :user_id AND course_id = :course_id LIMIT 1');
+        $stmt->execute([
+            'user_id' => $userId,
+            'course_id' => $courseId,
+        ]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? true : false;
+    }
+
+    public function findByUserAndCourse(int $userId, int $courseId): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM enrollments WHERE user_id = :user_id AND course_id = :course_id LIMIT 1');
+        $stmt->execute([
+            'user_id' => $userId,
+            'course_id' => $courseId,
+        ]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public function listByUser(int $userId): array
+    {
+        $stmt = $this->db->prepare('SELECT e.id, e.status, e.course_id, c.name AS course_name, c.workload, c.instructor FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE e.user_id = :user_id ORDER BY c.name');
+        $stmt->execute(['user_id' => $userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function listByCourse(int $courseId): array
+    {
+        $stmt = $this->db->prepare('SELECT e.id, e.status, u.name AS user_name, u.email FROM enrollments e JOIN users u ON u.id = e.user_id WHERE e.course_id = :course_id ORDER BY u.name');
+        $stmt->execute(['course_id' => $courseId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function updateStatus(int $enrollmentId, string $status): void
+    {
+        $stmt = $this->db->prepare('UPDATE enrollments SET status = :status, updated_at = NOW() WHERE id = :id');
+        $stmt->execute([
+            'id' => $enrollmentId,
+            'status' => $status,
+        ]);
+    }
+
+    public function find(int $id): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM enrollments WHERE id = :id');
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public function countWithCertificateStatus(): int
+    {
+        $stmt = $this->db->query("SELECT COUNT(*) AS total FROM enrollments WHERE status = 'certificate_available'");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$row['total'];
+    }
+}
