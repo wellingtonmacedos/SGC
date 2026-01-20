@@ -10,7 +10,7 @@ class Course extends Model
 {
     public function create(array $data): int
     {
-        $stmt = $this->db->prepare('INSERT INTO courses (name, description, workload, instructor, period, date, time, location, cover_image, status, allow_enrollment, created_at) VALUES (:name, :description, :workload, :instructor, :period, :date, :time, :location, :cover_image, :status, :allow_enrollment, NOW())');
+        $stmt = $this->db->prepare('INSERT INTO courses (name, description, workload, instructor, period, date, time, location, cover_image, status, allow_enrollment, max_enrollments, created_at) VALUES (:name, :description, :workload, :instructor, :period, :date, :time, :location, :cover_image, :status, :allow_enrollment, :max_enrollments, NOW())');
         $stmt->execute([
             'name' => $data['name'],
             'description' => $data['description'],
@@ -23,13 +23,14 @@ class Course extends Model
             'cover_image' => $data['cover_image'],
             'status' => $data['status'],
             'allow_enrollment' => $data['allow_enrollment'],
+            'max_enrollments' => !empty($data['max_enrollments']) ? $data['max_enrollments'] : 0,
         ]);
         return (int)$this->db->lastInsertId();
     }
 
     public function update(int $id, array $data): void
     {
-        $stmt = $this->db->prepare('UPDATE courses SET name = :name, description = :description, workload = :workload, instructor = :instructor, period = :period, date = :date, time = :time, location = :location, cover_image = :cover_image, status = :status, allow_enrollment = :allow_enrollment WHERE id = :id');
+        $stmt = $this->db->prepare('UPDATE courses SET name = :name, description = :description, workload = :workload, instructor = :instructor, period = :period, date = :date, time = :time, location = :location, cover_image = :cover_image, status = :status, allow_enrollment = :allow_enrollment, max_enrollments = :max_enrollments WHERE id = :id');
         $stmt->execute([
             'id' => $id,
             'name' => $data['name'],
@@ -43,6 +44,7 @@ class Course extends Model
             'cover_image' => $data['cover_image'],
             'status' => $data['status'],
             'allow_enrollment' => $data['allow_enrollment'],
+            'max_enrollments' => !empty($data['max_enrollments']) ? $data['max_enrollments'] : 0,
         ]);
     }
 
@@ -54,7 +56,7 @@ class Course extends Model
 
     public function find(int $id): ?array
     {
-        $stmt = $this->db->prepare('SELECT * FROM courses WHERE id = :id');
+        $stmt = $this->db->prepare('SELECT c.*, (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) as enrollments_count FROM courses c WHERE c.id = :id');
         $stmt->execute(['id' => $id]);
         $course = $stmt->fetch(PDO::FETCH_ASSOC);
         return $course ?: null;
@@ -62,13 +64,24 @@ class Course extends Model
 
     public function all(): array
     {
-        $stmt = $this->db->query('SELECT * FROM courses ORDER BY name');
+        $sql = 'SELECT c.*, COUNT(e.id) as enrollments_count 
+                FROM courses c 
+                LEFT JOIN enrollments e ON c.id = e.course_id 
+                GROUP BY c.id 
+                ORDER BY c.name';
+        $stmt = $this->db->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function availableForEnrollment(): array
     {
-        $stmt = $this->db->query("SELECT * FROM courses WHERE status = 'active' AND allow_enrollment = 1 ORDER BY name");
+        $sql = "SELECT c.*, COUNT(e.id) as enrollments_count 
+                FROM courses c 
+                LEFT JOIN enrollments e ON c.id = e.course_id 
+                WHERE c.status = 'active' AND c.allow_enrollment = 1 
+                GROUP BY c.id 
+                ORDER BY c.name";
+        $stmt = $this->db->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

@@ -17,8 +17,28 @@
     </div>
 </form>
 <?php if ($selectedCourseId && empty($enrollments)): ?>
+    <div class="mb-3">
+        <div class="btn-group">
+            <a href="index.php?r=admin/enrollments&course_id=<?php echo $selectedCourseId; ?>&export=csv" class="btn btn-outline-success btn-sm">
+                <i class="fas fa-file-csv"></i> Exportar CSV
+            </a>
+            <a href="index.php?r=admin/enrollments&course_id=<?php echo $selectedCourseId; ?>&export=pdf" target="_blank" class="btn btn-outline-danger btn-sm">
+                <i class="fas fa-file-pdf"></i> Exportar PDF
+            </a>
+        </div>
+    </div>
     <p class="text-muted">Nenhuma inscrição para este curso.</p>
 <?php elseif ($selectedCourseId): ?>
+    <div class="mb-3 d-flex justify-content-end">
+        <div class="btn-group">
+            <a href="index.php?r=admin/enrollments&course_id=<?php echo $selectedCourseId; ?>&export=csv" class="btn btn-outline-success btn-sm">
+                <i class="fas fa-file-csv"></i> Exportar CSV
+            </a>
+            <a href="index.php?r=admin/enrollments&course_id=<?php echo $selectedCourseId; ?>&export=pdf" target="_blank" class="btn btn-outline-danger btn-sm">
+                <i class="fas fa-file-pdf"></i> Exportar PDF
+            </a>
+        </div>
+    </div>
     <div class="table-responsive">
         <table class="table table-sm table-striped align-middle">
             <thead>

@@ -1,11 +1,13 @@
 <?php
 use App\Core\Auth;
 
-$user = Auth::user();
+if (!isset($user)) {
+    $user = Auth::user();
+}
 
-function e(string $value): string
+function e(?string $value): string
 {
-    return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
 function formatDateBr(?string $value): string
@@ -188,6 +190,9 @@ function formatTimeBr(?string $value): string
                 </a>
                 <a class="nav-link <?php echo $route === 'admin/certificates' ? 'active' : ''; ?>" href="index.php?r=admin/certificates">
                     <i class="fas fa-certificate"></i> Certificados
+                </a>
+                <a class="nav-link <?php echo $route === 'organization' ? 'active' : ''; ?>" href="index.php?r=organization">
+                    <i class="fas fa-building"></i> Configurações do Órgão
                 </a>
             <?php endif; ?>
             

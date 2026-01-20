@@ -46,30 +46,85 @@ class AuthController extends Controller
 
         if ($this->isPost()) {
             $name = $this->getPostString('name');
-            $cpf = $this->getPostString('cpf');
+            $username = $this->getPostString('username');
+            $cpf = preg_replace('/[^0-9]/', '', $this->getPostString('cpf'));
             $email = $this->getPostString('email');
+            $phone = $this->getPostString('phone');
+            $address = $this->getPostString('address');
             $password = $this->getPostString('password');
             $confirmPassword = $this->getPostString('confirm_password');
 
-            if (!$name || !$cpf || !$email || !$password) {
+            // Validations
+            if (!$name || !$username || !$cpf || !$email || !$address || !$password) {
                 $error = 'Preencha todos os campos obrigatórios';
+            } elseif (strlen($name) < 3 || preg_match('/\d/', $name)) {
+                $error = 'Nome inválido (mínimo 3 caracteres, sem números)';
+            } elseif (preg_match('/\s/', $username)) {
+                $error = 'O nome de usuário não pode conter espaços';
+            } elseif (!$this->validateCpf($cpf)) {
+                $error = 'CPF inválido';
             } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $error = 'E-mail inválido';
             } elseif ($password !== $confirmPassword) {
                 $error = 'As senhas não conferem';
             } else {
                 $userModel = new User();
-                if ($userModel->findByEmail($email) || $userModel->findByCpf($cpf)) {
-                    $error = 'Já existe um usuário com este CPF ou e-mail';
+                if ($userModel->findByEmail($email)) {
+                    $error = 'Já existe um usuário com este e-mail';
+                } elseif ($userModel->findByCpf($cpf)) {
+                    $error = 'Já existe um usuário com este CPF';
+                } elseif ($userModel->findByUsername($username)) {
+                    $error = 'Este nome de usuário já está em uso';
                 } else {
-                    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-                    $userId = $userModel->createCandidate($name, $cpf, $email, $passwordHash);
-                    $user = $userModel->findById($userId);
+                    // Photo Upload
+                    $photoPath = null;
+                    if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+                        $file = $_FILES['photo'];
+                        if ($file['size'] > CANDIDATE_PHOTO_MAX_SIZE) {
+                            $error = 'A foto excede o tamanho máximo permitido (2MB)';
+                        } else {
+                            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                            $mimeType = $finfo->file($file['tmp_name']);
+                            $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png'];
+                            
+                            if (!isset($allowed[$mimeType])) {
+                                $error = 'Apenas imagens JPG ou PNG são permitidas';
+                            } else {
+                                if (!is_dir(CANDIDATE_PHOTO_PATH)) {
+                                    mkdir(CANDIDATE_PHOTO_PATH, 0775, true);
+                                }
+                                $ext = $allowed[$mimeType];
+                                $fileName = sha1(uniqid((string)time(), true)) . '.' . $ext;
+                                $target = CANDIDATE_PHOTO_PATH . '/' . $fileName;
+                                
+                                if (move_uploaded_file($file['tmp_name'], $target)) {
+                                    $photoPath = $fileName;
+                                } else {
+                                    $error = 'Falha ao salvar a foto';
+                                }
+                            }
+                        }
+                    }
 
-                    Mailer::send(MAIL_ADMIN_ADDRESS, 'Novo cadastro de candidato', 'Novo candidato cadastrado: ' . htmlspecialchars($name));
-                    Mailer::send($email, 'Cadastro realizado com sucesso', 'Seu cadastro no SGC foi realizado com sucesso.');
+                    if (!$error) {
+                        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+                        $userId = $userModel->createCandidate(
+                            $name, 
+                            $cpf, 
+                            $email, 
+                            $passwordHash,
+                            $username,
+                            $phone,
+                            $address,
+                            $photoPath
+                        );
+                        
+                        // Mailer calls...
+                        Mailer::send(MAIL_ADMIN_ADDRESS, 'Novo cadastro de candidato', 'Novo candidato cadastrado: ' . htmlspecialchars($name));
+                        Mailer::send($email, 'Cadastro realizado com sucesso', 'Seu cadastro no SGC foi realizado com sucesso.');
 
-                    $success = true;
+                        $success = true;
+                    }
                 }
             }
         }
@@ -78,6 +133,34 @@ class AuthController extends Controller
             'error' => $error,
             'success' => $success,
         ]);
+    }
+
+    private function validateCpf(string $cpf): bool
+    {
+        // Extract numbers only
+        $cpf = preg_replace('/[^0-9]/', '', $cpf);
+        
+        if (strlen($cpf) !== 11) {
+            return false;
+        }
+        
+        // Check for repeated digits
+        if (preg_match('/(\d)\1{10}/', $cpf)) {
+            return false;
+        }
+        
+        // Calculate verification digits
+        for ($t = 9; $t < 11; $t++) {
+            for ($d = 0, $c = 0; $c < $t; $c++) {
+                $d += $cpf[$c] * (($t + 1) - $c);
+            }
+            $d = ((10 * $d) % 11) % 10;
+            if ($cpf[$c] != $d) {
+                return false;
+            }
+        }
+        
+        return true;
     }
 
     public function logout(): void

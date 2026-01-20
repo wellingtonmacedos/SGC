@@ -99,11 +99,32 @@ foreach ($enrollments as $enr) {
                                     </div>
                                 <?php endif; ?>
                                 <?php if (!empty($course['location'])): ?>
-                                    <div class="d-flex align-items-center text-muted small">
+                                    <div class="d-flex align-items-center text-muted small mb-2">
                                         <i class="fas fa-map-marker-alt me-2 width-20"></i>
                                         <span><?php echo e($course['location']); ?></span>
                                     </div>
                                 <?php endif; ?>
+                                
+                                <div class="mt-2">
+                                    <?php 
+                                    $max = isset($course['max_enrollments']) ? (int)$course['max_enrollments'] : 0;
+                                    $count = isset($course['enrollments_count']) ? (int)$course['enrollments_count'] : 0;
+                                    
+                                    if ($max > 0) {
+                                        $percent = ($count / $max) * 100;
+                                        $color = $percent >= 100 ? 'danger' : ($percent >= 80 ? 'warning' : 'success');
+                                        
+                                        if ($count >= $max) {
+                                            echo "<span class='badge bg-danger w-100'><i class='fas fa-ban me-1'></i> Vagas Esgotadas ({$count}/{$max})</span>";
+                                        } else {
+                                            $remaining = $max - $count;
+                                            echo "<span class='badge bg-{$color} text-wrap'><i class='fas fa-user-check me-1'></i> {$remaining} vagas restantes ({$count}/{$max})</span>";
+                                        }
+                                    } else {
+                                        echo "<span class='badge bg-success'><i class='fas fa-infinity me-1'></i> Vagas Ilimitadas</span>";
+                                    }
+                                    ?>
+                                </div>
                             </div>
                             
                             <p class="card-text text-secondary small flex-grow-1">
@@ -112,8 +133,17 @@ foreach ($enrollments as $enr) {
                             
                             <form method="post" class="mt-3">
                                 <input type="hidden" name="course_id" value="<?php echo (int)$course['id']; ?>">
-                                <button type="submit" class="btn btn-primary w-100 py-2 fw-medium">
-                                    <i class="fas fa-plus-circle me-2"></i>Inscrever-se
+                                <?php 
+                                $max = isset($course['max_enrollments']) ? (int)$course['max_enrollments'] : 0;
+                                $count = isset($course['enrollments_count']) ? (int)$course['enrollments_count'] : 0;
+                                $isFull = ($max > 0 && $count >= $max);
+                                ?>
+                                <button type="submit" class="btn <?php echo $isFull ? 'btn-secondary' : 'btn-primary'; ?> w-100 py-2 fw-medium" <?php echo $isFull ? 'disabled' : ''; ?>>
+                                    <?php if ($isFull): ?>
+                                        <i class="fas fa-lock me-2"></i>Esgotado
+                                    <?php else: ?>
+                                        <i class="fas fa-plus-circle me-2"></i>Inscrever-se
+                                    <?php endif; ?>
                                 </button>
                             </form>
                         </div>

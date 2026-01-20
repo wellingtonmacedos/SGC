@@ -21,6 +21,12 @@ define('CERTIFICATE_MAX_SIZE', 5 * 1024 * 1024);
 define('COURSE_COVER_PATH', __DIR__ . '/storage/covers');
 define('COURSE_COVER_MAX_SIZE', 2 * 1024 * 1024);
 
+define('CANDIDATE_PHOTO_PATH', __DIR__ . '/storage/photos');
+define('CANDIDATE_PHOTO_MAX_SIZE', 2 * 1024 * 1024);
+
+define('ORGANIZATION_LOGO_PATH', __DIR__ . '/storage/organization');
+define('ORGANIZATION_LOGO_MAX_SIZE', 2 * 1024 * 1024);
+
 require __DIR__ . '/app/core/Autoloader.php';
 App\Core\Autoloader::register();
 App\Core\Auth::ensureAdminUserExists();

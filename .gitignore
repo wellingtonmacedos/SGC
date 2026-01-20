@@ -1,0 +1,11 @@
+storage/certificates/*
+!storage/certificates/.htaccess
+storage/covers/*
+!storage/covers/.htaccess
+storage/photos/*
+!storage/photos/.htaccess
+storage/organization/*
+!storage/organization/.htaccess
+*.log
+.DS_Store
+Thumbs.db

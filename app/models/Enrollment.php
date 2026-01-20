@@ -50,9 +50,17 @@ class Enrollment extends Model
 
     public function listByCourse(int $courseId): array
     {
-        $stmt = $this->db->prepare('SELECT e.id, e.status, u.name AS user_name, u.email FROM enrollments e JOIN users u ON u.id = e.user_id WHERE e.course_id = :course_id ORDER BY u.name');
+        $stmt = $this->db->prepare('SELECT e.id, e.status, u.name AS user_name, u.email, u.cpf FROM enrollments e JOIN users u ON u.id = e.user_id WHERE e.course_id = :course_id ORDER BY u.name');
         $stmt->execute(['course_id' => $courseId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function countByCourse(int $courseId): int
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) AS total FROM enrollments WHERE course_id = :course_id');
+        $stmt->execute(['course_id' => $courseId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$row['total'];
     }
 
     public function updateStatus(int $enrollmentId, string $status): void

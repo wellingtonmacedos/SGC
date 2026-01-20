@@ -23,6 +23,7 @@ CREATE TABLE courses (
     cover_image VARCHAR(255) DEFAULT NULL,
     status ENUM('active','inactive') NOT NULL DEFAULT 'active',
     allow_enrollment TINYINT(1) NOT NULL DEFAULT 1,
+    max_enrollments INT UNSIGNED DEFAULT 0,
     created_at DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

@@ -55,6 +55,7 @@ class AdminController extends Controller
             $location = $this->getPostString('location');
             $status = $this->getPostString('status') === 'inactive' ? 'inactive' : 'active';
             $allowEnrollment = isset($_POST['allow_enrollment']) ? 1 : 0;
+            $maxEnrollments = $this->getPostInt('max_enrollments');
 
             if (!$name || !$description || !$instructor) {
                 $error = 'Preencha os campos obrigatórios';
@@ -105,7 +106,7 @@ class AdminController extends Controller
 
                 if ($error) {
                     $courses = $courseModel->all();
-                    $this->render('admin/courses', [
+                    $this->render('admin/courses_v2', [
                         'courses' => $courses,
                         'error' => $error,
                     ]);
@@ -124,6 +125,7 @@ class AdminController extends Controller
                     'cover_image' => $coverImage,
                     'status' => $status,
                     'allow_enrollment' => $allowEnrollment,
+                    'max_enrollments' => $maxEnrollments,
                 ];
 
                 if ($id > 0) {
@@ -158,7 +160,7 @@ class AdminController extends Controller
             }));
         }
 
-        $this->render('admin/courses', [
+        $this->render('admin/courses_v2', [
             'courses' => $courses,
             'error' => $error,
             'filterDate' => $filterDate,
@@ -191,6 +193,38 @@ class AdminController extends Controller
 
         if ($selectedCourseId > 0) {
             $enrollments = $enrollmentModel->listByCourse($selectedCourseId);
+            
+            if (isset($_GET['export'])) {
+                if ($_GET['export'] === 'csv') {
+                    header('Content-Type: text/csv; charset=utf-8');
+                    header('Content-Disposition: attachment; filename="inscritos_curso_' . $selectedCourseId . '.csv"');
+                    $output = fopen('php://output', 'w');
+                    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM for Excel
+                    fputcsv($output, ['Nome', 'Email', 'CPF', 'Status']);
+                    foreach ($enrollments as $row) {
+                        $status = match($row['status']) {
+                            'certificate_available' => 'Certificado disponível',
+                            'completed' => 'Concluído',
+                            default => 'Inscrito'
+                        };
+                        fputcsv($output, [
+                            $row['user_name'], 
+                            $row['email'], 
+                            $row['cpf'] ?? '', 
+                            $status
+                        ]);
+                    }
+                    fclose($output);
+                    exit;
+                } elseif ($_GET['export'] === 'pdf') {
+                    $course = $courseModel->find($selectedCourseId);
+                    $this->render('admin/enrollments_pdf', [
+                        'course' => $course,
+                        'enrollments' => $enrollments
+                    ]);
+                    return;
+                }
+            }
         }
 
         $this->render('admin/enrollments', [
@@ -310,5 +344,26 @@ class AdminController extends Controller
             'certificatesByUser' => $certificatesByUser,
             'candidatesById' => $candidatesById,
         ]);
+    }
+
+    public function migrate(): void
+    {
+        Auth::requireAdmin();
+        $pdo = \App\Core\Database::getConnection();
+        
+        try {
+            $stmt = $pdo->query("SHOW COLUMNS FROM courses LIKE 'max_enrollments'");
+            $column = $stmt->fetch();
+
+            if (!$column) {
+                $pdo->exec("ALTER TABLE courses ADD COLUMN max_enrollments INT UNSIGNED DEFAULT 0 AFTER allow_enrollment");
+                echo "<h3>Sucesso!</h3><p>Coluna 'max_enrollments' adicionada com sucesso.</p>";
+            } else {
+                echo "<h3>Info</h3><p>A coluna 'max_enrollments' já existe.</p>";
+            }
+            echo '<p><a href="index.php?r=admin/courses">Voltar para Cursos</a></p>';
+        } catch (\PDOException $e) {
+            echo "<h3>Erro</h3><p>" . $e->getMessage() . "</p>";
+        }
     }
 }

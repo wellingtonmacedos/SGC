@@ -24,6 +24,14 @@ class User extends Model
         return $user ?: null;
     }
 
+    public function findByUsername(string $username): ?array
+    {
+        $stmt = $this->db->prepare('SELECT * FROM users WHERE username = :username LIMIT 1');
+        $stmt->execute(['username' => $username]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $user ?: null;
+    }
+
     public function findById(int $id): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
@@ -32,14 +40,18 @@ class User extends Model
         return $user ?: null;
     }
 
-    public function createCandidate(string $name, string $cpf, string $email, string $passwordHash): int
+    public function createCandidate(string $name, string $cpf, string $email, string $passwordHash, string $username, ?string $phone = null, ?string $address = null, ?string $photo = null): int
     {
-        $stmt = $this->db->prepare('INSERT INTO users (name, cpf, email, password_hash, role, created_at) VALUES (:name, :cpf, :email, :password_hash, :role, NOW())');
+        $stmt = $this->db->prepare('INSERT INTO users (name, cpf, email, password_hash, username, phone, address, photo, role, created_at) VALUES (:name, :cpf, :email, :password_hash, :username, :phone, :address, :photo, :role, NOW())');
         $stmt->execute([
             'name' => $name,
             'cpf' => $cpf,
             'email' => $email,
             'password_hash' => $passwordHash,
+            'username' => $username,
+            'phone' => $phone,
+            'address' => $address,
+            'photo' => $photo,
             'role' => 'candidate',
         ]);
 
@@ -75,7 +87,7 @@ class User extends Model
 
     public function listCandidates(): array
     {
-        $stmt = $this->db->query("SELECT id, name, email, cpf FROM users WHERE role = 'candidate' ORDER BY name");
+        $stmt = $this->db->query("SELECT id, name, email, cpf, username, phone, address, photo FROM users WHERE role = 'candidate' ORDER BY name");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -86,6 +98,29 @@ class User extends Model
             'password_hash' => $passwordHash,
             'id' => $id,
         ]);
+    }
+
+    public function updateProfile(int $id, string $name, string $email, string $username, ?string $phone, string $address, ?string $photo): void
+    {
+        $sql = 'UPDATE users SET name = :name, email = :email, username = :username, phone = :phone, address = :address';
+        $params = [
+            'name' => $name,
+            'email' => $email,
+            'username' => $username,
+            'phone' => $phone,
+            'address' => $address,
+            'id' => $id,
+        ];
+
+        if ($photo !== null) {
+            $sql .= ', photo = :photo';
+            $params['photo'] = $photo;
+        }
+
+        $sql .= ' WHERE id = :id';
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
     }
 
     public function update(int $id, string $name, string $email): void
