@@ -14,6 +14,7 @@
                 <th>E-mail</th>
                 <th>Telefone</th>
                 <th>Endereço</th>
+                <th>Ações</th>
             </tr>
             </thead>
             <tbody>
@@ -34,6 +35,11 @@
                     <td><?php echo e($candidate['email']); ?></td>
                     <td><?php echo e($candidate['phone'] ?? '-'); ?></td>
                     <td><small><?php echo e(mb_strimwidth($candidate['address'] ?? '-', 0, 30, '...')); ?></small></td>
+                    <td>
+                        <a href="index.php?r=admin/edit-candidate&id=<?php echo $candidate['id']; ?>" class="btn btn-sm btn-outline-primary" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    </td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

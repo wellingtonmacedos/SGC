@@ -25,6 +25,11 @@ class AuthController extends Controller
 
             if ($user && password_verify($password, $user['password_hash'])) {
                 Auth::login($user);
+                
+                if (isset($user['force_password_change']) && $user['force_password_change']) {
+                    $this->redirect('candidate/change-password');
+                }
+
                 if ($user['role'] === 'admin') {
                     $this->redirect('admin/dashboard');
                 } else {

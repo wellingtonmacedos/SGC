@@ -5,9 +5,11 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Controller;
+use App\Core\Mailer;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\Organization;
 use App\Models\User;
 
 class CandidateController extends Controller
@@ -155,6 +157,20 @@ class CandidateController extends Controller
                         $error = 'As inscrições para este curso estão encerradas.';
                     } else {
                         $enrollmentModel->create($user['id'], $courseId);
+
+                        // Send emails
+                        $subject = 'Confirmação de Inscrição: ' . $course['name'];
+                        $message = "Olá " . htmlspecialchars($user['name']) . ",\n\n";
+                        $message .= "Sua inscrição no curso \"" . htmlspecialchars($course['name']) . "\" foi realizada com sucesso.\n";
+                        $message .= "Bons estudos!";
+                        
+                        Mailer::send($user['email'], $subject, $message);
+                        
+                        // Notify Admin
+                        $adminSubject = 'Nova Inscrição: ' . $course['name'];
+                        $adminMessage = "O candidato " . htmlspecialchars($user['name']) . " (" . $user['email'] . ") se inscreveu no curso \"" . htmlspecialchars($course['name']) . "\".";
+                        Mailer::send(MAIL_ADMIN_ADDRESS, $adminSubject, $adminMessage);
+
                         // Redirect to avoid form resubmission and show success
                         $this->redirect('candidate/dashboard&section=enrollments#enrollments');
                     }
@@ -221,5 +237,35 @@ class CandidateController extends Controller
         header('Content-Length: ' . (string)$cert['file_size']);
         readfile($filePath);
         exit;
+    }
+
+    public function changePassword(): void
+    {
+        Auth::requireCandidate();
+        $user = Auth::user();
+        $error = '';
+
+        if ($this->isPost()) {
+            $password = $this->getPostString('password');
+            $confirmPassword = $this->getPostString('confirm_password');
+
+            if (!$password || !$confirmPassword) {
+                $error = 'Preencha todos os campos.';
+            } elseif ($password !== $confirmPassword) {
+                $error = 'As senhas não conferem.';
+            } else {
+                $userModel = new User();
+                $userModel->updatePassword((int)$user['id'], password_hash($password, PASSWORD_DEFAULT), false);
+                
+                // Update session to remove force flag
+                if (isset($_SESSION['user'])) {
+                    $_SESSION['user']['force_password_change'] = 0;
+                }
+                
+                $this->redirect('candidate/dashboard');
+            }
+        }
+
+        $this->render('candidate/change_password', ['error' => $error]);
     }
 }

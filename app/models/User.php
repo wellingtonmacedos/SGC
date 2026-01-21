@@ -91,13 +91,60 @@ class User extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function updatePassword(int $id, string $passwordHash): void
+    public function updatePassword(int $id, string $passwordHash, bool $forceChange = false): void
     {
-        $stmt = $this->db->prepare('UPDATE users SET password_hash = :password_hash WHERE id = :id');
-        $stmt->execute([
+        $sql = 'UPDATE users SET password_hash = :password_hash';
+        $params = [
             'password_hash' => $passwordHash,
             'id' => $id,
+        ];
+
+        if ($forceChange) {
+            $sql .= ', force_password_change = 1';
+        } else {
+            // Optional: reset if admin changes password but doesn't force change? 
+            // Usually if admin resets, they might want to force change. 
+            // If just updating, maybe not. 
+            // But let's stick to the parameter. 
+            // If the column exists, we can update it. 
+            // To be safe with the migration, let's assume the column exists now.
+            $sql .= ', force_password_change = :force_change';
+            $params['force_change'] = 0;
+        }
+
+        $sql .= ' WHERE id = :id';
+        
+        // Actually, simpler query:
+        $stmt = $this->db->prepare('UPDATE users SET password_hash = :password_hash, force_password_change = :force_change WHERE id = :id');
+        $stmt->execute([
+            'password_hash' => $passwordHash,
+            'force_change' => $forceChange ? 1 : 0,
+            'id' => $id,
         ]);
+    }
+
+    public function updateCandidateCompleto(int $id, string $name, string $cpf, string $email, string $username, ?string $phone, ?string $address, ?string $photo): void
+    {
+        $sql = 'UPDATE users SET name = :name, cpf = :cpf, email = :email, username = :username, phone = :phone, address = :address';
+        $params = [
+            'name' => $name,
+            'cpf' => $cpf,
+            'email' => $email,
+            'username' => $username,
+            'phone' => $phone,
+            'address' => $address,
+            'id' => $id,
+        ];
+
+        if ($photo !== null) {
+            $sql .= ', photo = :photo';
+            $params['photo'] = $photo;
+        }
+
+        $sql .= ' WHERE id = :id AND role = "candidate"';
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
     }
 
     public function updateProfile(int $id, string $name, string $email, string $username, ?string $phone, string $address, ?string $photo): void

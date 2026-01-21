@@ -44,6 +44,12 @@ if (isset($_GET['migrate_db'])) {
             echo "<h1>Sucesso: Coluna 'photo' criada!</h1>";
         }
 
+        $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'force_password_change'");
+        if (!$stmt->fetch()) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN force_password_change TINYINT(1) DEFAULT 0");
+            echo "<h1>Sucesso: Coluna 'force_password_change' criada!</h1>";
+        }
+
         // Organization Settings Table
         $pdo->exec("CREATE TABLE IF NOT EXISTS organization_settings (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

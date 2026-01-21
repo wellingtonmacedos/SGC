@@ -9,6 +9,7 @@ use App\Core\Mailer;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\Organization;
 use App\Models\User;
 
 class AdminController extends Controller
@@ -181,6 +182,146 @@ class AdminController extends Controller
         ]);
     }
 
+    public function editCandidate(): void
+    {
+        Auth::requireAdmin();
+        $userModel = new User();
+        $error = '';
+        $success = '';
+
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        if ($id <= 0) {
+            $this->redirect('admin/candidates');
+        }
+
+        $candidate = $userModel->findById($id);
+        if (!$candidate || $candidate['role'] !== 'candidate') {
+            $this->redirect('admin/candidates');
+        }
+
+        if ($this->isPost()) {
+            $name = $this->getPostString('name');
+            $username = $this->getPostString('username');
+            $cpf = preg_replace('/[^0-9]/', '', $this->getPostString('cpf'));
+            $email = $this->getPostString('email');
+            $phone = $this->getPostString('phone');
+            $address = $this->getPostString('address');
+            $newPassword = $this->getPostString('new_password');
+            $forcePasswordChange = isset($_POST['force_password_change']);
+
+            if (!$name || !$username || !$cpf || !$email || !$address) {
+                $error = 'Preencha todos os campos obrigatórios';
+            } elseif (strlen($name) < 3 || preg_match('/\d/', $name)) {
+                $error = 'Nome inválido (mínimo 3 caracteres, sem números)';
+            } elseif (preg_match('/\s/', $username)) {
+                $error = 'O nome de usuário não pode conter espaços';
+            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $error = 'E-mail inválido';
+            } elseif (!$this->validateCpf($cpf)) {
+                $error = 'CPF inválido';
+            } else {
+                $checkEmail = $userModel->findByEmail($email);
+                if ($checkEmail && $checkEmail['id'] !== $id) {
+                    $error = 'E-mail já está em uso por outro usuário';
+                }
+
+                $checkCpf = $userModel->findByCpf($cpf);
+                if ($checkCpf && $checkCpf['id'] !== $id) {
+                    $error = 'CPF já está em uso por outro usuário';
+                }
+
+                $checkUsername = $userModel->findByUsername($username);
+                if ($checkUsername && $checkUsername['id'] !== $id) {
+                    $error = 'Nome de usuário já está em uso';
+                }
+
+                if (!$error) {
+                    $photoPath = $candidate['photo'];
+                    if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+                        $file = $_FILES['photo'];
+                        if ($file['size'] > CANDIDATE_PHOTO_MAX_SIZE) {
+                            $error = 'A foto excede o tamanho máximo permitido (2MB)';
+                        } else {
+                            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                            $mimeType = $finfo->file($file['tmp_name']);
+                            $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png'];
+                            
+                            if (!isset($allowed[$mimeType])) {
+                                $error = 'Apenas imagens JPG ou PNG são permitidas';
+                            } else {
+                                if (!is_dir(CANDIDATE_PHOTO_PATH)) {
+                                    mkdir(CANDIDATE_PHOTO_PATH, 0775, true);
+                                }
+                                $ext = $allowed[$mimeType];
+                                $fileName = sha1(uniqid((string)time(), true)) . '.' . $ext;
+                                $target = CANDIDATE_PHOTO_PATH . '/' . $fileName;
+                                
+                                if (move_uploaded_file($file['tmp_name'], $target)) {
+                                    if ($photoPath && file_exists(CANDIDATE_PHOTO_PATH . '/' . $photoPath)) {
+                                        unlink(CANDIDATE_PHOTO_PATH . '/' . $photoPath);
+                                    }
+                                    $photoPath = $fileName;
+                                } else {
+                                    $error = 'Falha ao salvar a foto';
+                                }
+                            }
+                        }
+                    }
+
+                    if (!$error) {
+                        $userModel->updateCandidateCompleto($id, $name, $cpf, $email, $username, $phone, $address, $photoPath);
+
+                        if ($newPassword) {
+                            $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
+                            $userModel->updatePassword($id, $passwordHash, $forcePasswordChange);
+                            
+                            $subject = 'Senha Redefinida pelo Administrador';
+                            $message = "Olá " . htmlspecialchars($name) . ",\n\n";
+                            $message .= "Sua senha de acesso ao SGC foi redefinida pelo administrador.\n";
+                            $message .= "Caso não reconheça esta ação, entre em contato com a instituição imediatamente.\n";
+                            
+                            Mailer::send($email, $subject, $message);
+                        }
+
+                        $success = 'Dados atualizados com sucesso';
+                        $candidate = $userModel->findById($id);
+                    }
+                }
+            }
+        }
+
+        $this->render('admin/candidate_edit', [
+            'candidate' => $candidate,
+            'error' => $error,
+            'success' => $success
+        ]);
+    }
+
+    private function validateCpf(string $cpf): bool
+    {
+        $cpf = preg_replace('/[^0-9]/', '', $cpf);
+        
+        if (strlen($cpf) !== 11) {
+            return false;
+        }
+        
+        if (preg_match('/(\d)\1{10}/', $cpf)) {
+            return false;
+        }
+        
+        for ($t = 9; $t < 11; $t++) {
+            for ($d = 0, $c = 0; $c < $t; $c++) {
+                $d += $cpf[$c] * (($t + 1) - $c);
+            }
+            $d = ((10 * $d) % 11) % 10;
+            if ($cpf[$c] != $d) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
     public function enrollments(): void
     {
         Auth::requireAdmin();
@@ -195,12 +336,40 @@ class AdminController extends Controller
             $enrollments = $enrollmentModel->listByCourse($selectedCourseId);
             
             if (isset($_GET['export'])) {
+                $organizationModel = new Organization();
+                $orgSettings = $organizationModel->getSettings();
+                $course = $courseModel->find($selectedCourseId);
+
                 if ($_GET['export'] === 'csv') {
                     header('Content-Type: text/csv; charset=utf-8');
                     header('Content-Disposition: attachment; filename="inscritos_curso_' . $selectedCourseId . '.csv"');
                     $output = fopen('php://output', 'w');
                     fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM for Excel
-                    fputcsv($output, ['Nome', 'Email', 'CPF', 'Status']);
+                    
+                    // Organization Header
+                    if (!empty($orgSettings['organization_name'])) {
+                        fputcsv($output, [$orgSettings['organization_name']], ';');
+                    }
+                    
+                    $details = [];
+                    if (!empty($orgSettings['address'])) $details[] = $orgSettings['address'];
+                    if (!empty($orgSettings['city']) && !empty($orgSettings['state'])) $details[] = $orgSettings['city'] . ' - ' . $orgSettings['state'];
+                    if (!empty($orgSettings['phone'])) $details[] = 'Tel: ' . $orgSettings['phone'];
+                    if (!empty($orgSettings['email'])) $details[] = 'E-mail: ' . $orgSettings['email'];
+                    if (!empty($orgSettings['cnpj'])) $details[] = 'CNPJ: ' . $orgSettings['cnpj'];
+                    
+                    if (!empty($details)) {
+                        fputcsv($output, [implode(' | ', $details)], ';');
+                    }
+                    fputcsv($output, [], ';'); // Empty line
+
+                    // Course Info
+                    fputcsv($output, ['Curso: ' . $course['name']], ';');
+                    fputcsv($output, ['Instrutor: ' . $course['instructor'], 'Período: ' . $course['period']], ';');
+                    fputcsv($output, [], ';'); // Empty line
+
+                    // Data Table
+                    fputcsv($output, ['Nome', 'Email', 'CPF', 'Status'], ';');
                     foreach ($enrollments as $row) {
                         $status = match($row['status']) {
                             'certificate_available' => 'Certificado disponível',
@@ -212,15 +381,15 @@ class AdminController extends Controller
                             $row['email'], 
                             $row['cpf'] ?? '', 
                             $status
-                        ]);
+                        ], ';');
                     }
                     fclose($output);
                     exit;
                 } elseif ($_GET['export'] === 'pdf') {
-                    $course = $courseModel->find($selectedCourseId);
                     $this->render('admin/enrollments_pdf', [
                         'course' => $course,
-                        'enrollments' => $enrollments
+                        'enrollments' => $enrollments,
+                        'orgSettings' => $orgSettings
                     ]);
                     return;
                 }
