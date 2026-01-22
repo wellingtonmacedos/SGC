@@ -134,7 +134,7 @@ class CandidateController extends Controller
     {
         Auth::requireCandidate();
         $user = Auth::user();
-
+        
         $courseModel = new Course();
         $enrollmentModel = new Enrollment();
         $certificateModel = new Certificate();
@@ -172,7 +172,7 @@ class CandidateController extends Controller
                         Mailer::send(MAIL_ADMIN_ADDRESS, $adminSubject, $adminMessage);
 
                         // Redirect to avoid form resubmission and show success
-                        $this->redirect('candidate/dashboard&section=enrollments#enrollments');
+                        $this->redirect('candidate/dashboard');
                     }
                 }
             }
@@ -208,6 +208,84 @@ class CandidateController extends Controller
             'filterDate' => $filterDate,
             'filterSearch' => $filterSearch,
             'error' => $error,
+            'pageTitle' => 'Painel do Candidato'
+        ]);
+    }
+
+    public function courseDetails(): void
+    {
+        Auth::requireCandidate();
+        $user = Auth::user();
+
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        if ($id <= 0) {
+            header('Location: index.php?r=candidate/dashboard');
+            exit;
+        }
+
+        $courseModel = new Course();
+        $course = $courseModel->find($id);
+
+        if (!$course) {
+            header('Location: index.php?r=candidate/dashboard');
+            exit;
+        }
+
+        $enrollmentModel = new Enrollment();
+        $isEnrolled = $enrollmentModel->exists((int)$user['id'], $id);
+        
+        // Check if course is full
+        $isFull = false;
+        if (!empty($course['max_enrollments']) && $course['max_enrollments'] > 0) {
+            if ($course['enrollments_count'] >= $course['max_enrollments']) {
+                $isFull = true;
+            }
+        }
+
+        $this->render('candidate/course_details', [
+            'user' => $user,
+            'course' => $course,
+            'isEnrolled' => $isEnrolled,
+            'isFull' => $isFull,
+            'pageTitle' => $course['name']
+        ]);
+    }
+
+    public function enrollments(): void
+    {
+        Auth::requireCandidate();
+        $user = Auth::user();
+
+        $enrollmentModel = new Enrollment();
+        $certificateModel = new Certificate();
+
+        $enrollments = $enrollmentModel->listByUser($user['id']);
+        $certificates = $certificateModel->listByUser($user['id']);
+
+        $this->render('candidate/enrollments', [
+            'user' => $user,
+            'enrollments' => $enrollments,
+            'certificates' => $certificates,
+            'pageTitle' => 'Minhas Inscrições'
+        ]);
+    }
+
+    public function certificates(): void
+    {
+        Auth::requireCandidate();
+        $user = Auth::user();
+
+        $certificateModel = new Certificate();
+        $certificates = $certificateModel->listByUser($user['id']);
+        
+        // Enhance certificate data with course info if needed, 
+        // but listByUser likely provides course_name etc. based on typical implementation.
+        // Assuming certificates array has course details.
+
+        $this->render('candidate/certificates', [
+            'user' => $user,
+            'certificates' => $certificates,
+            'pageTitle' => 'Meus Certificados'
         ]);
     }
 

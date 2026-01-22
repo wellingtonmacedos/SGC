@@ -26,6 +26,12 @@ class FileController extends Controller
         $this->serveFile(ORGANIZATION_LOGO_PATH);
     }
 
+    public function cover(): void
+    {
+        // Public access or restricted? Usually course covers are public
+        $this->serveFile(COURSE_COVER_PATH);
+    }
+
     private function serveFile(string $basePath): void
     {
         $file = $_GET['file'] ?? '';

@@ -48,6 +48,7 @@ class AdminController extends Controller
             $id = $this->getPostInt('id');
             $name = $this->getPostString('name');
             $description = $this->getPostString('description');
+            $targetAudience = $this->getPostString('target_audience');
             $workload = $this->getPostInt('workload');
             $instructor = $this->getPostString('instructor');
             $period = $this->getPostString('period');
@@ -117,6 +118,7 @@ class AdminController extends Controller
                 $data = [
                     'name' => $name,
                     'description' => $description,
+                    'target_audience' => $targetAudience,
                     'workload' => $workload,
                     'instructor' => $instructor,
                     'period' => $period,

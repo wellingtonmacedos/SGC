@@ -9,7 +9,19 @@ class Auth
 {
     public static function user(): ?array
     {
-        return isset($_SESSION['user']) ? $_SESSION['user'] : null;
+        if (isset($_SESSION['user'])) {
+            // Self-healing: Ensure photo and username are present in session
+            if (!array_key_exists('photo', $_SESSION['user']) || !array_key_exists('username', $_SESSION['user'])) {
+                $userModel = new User();
+                $freshUser = $userModel->findById((int)$_SESSION['user']['id']);
+                if ($freshUser) {
+                    self::login($freshUser); // Update session with fresh data
+                    return $_SESSION['user'];
+                }
+            }
+            return $_SESSION['user'];
+        }
+        return null;
     }
 
     public static function login(array $user): void
@@ -19,6 +31,8 @@ class Auth
             'name' => $user['name'],
             'email' => $user['email'],
             'role' => $user['role'],
+            'photo' => $user['photo'] ?? null,
+            'username' => $user['username'] ?? null,
         ];
     }
 

@@ -10,10 +10,11 @@ class Course extends Model
 {
     public function create(array $data): int
     {
-        $stmt = $this->db->prepare('INSERT INTO courses (name, description, workload, instructor, period, date, time, location, cover_image, status, allow_enrollment, max_enrollments, created_at) VALUES (:name, :description, :workload, :instructor, :period, :date, :time, :location, :cover_image, :status, :allow_enrollment, :max_enrollments, NOW())');
+        $stmt = $this->db->prepare('INSERT INTO courses (name, description, target_audience, workload, instructor, period, date, time, location, cover_image, status, allow_enrollment, max_enrollments, created_at) VALUES (:name, :description, :target_audience, :workload, :instructor, :period, :date, :time, :location, :cover_image, :status, :allow_enrollment, :max_enrollments, NOW())');
         $stmt->execute([
             'name' => $data['name'],
             'description' => $data['description'],
+            'target_audience' => $data['target_audience'] ?? null,
             'workload' => $data['workload'],
             'instructor' => $data['instructor'],
             'period' => $data['period'],
@@ -30,11 +31,12 @@ class Course extends Model
 
     public function update(int $id, array $data): void
     {
-        $stmt = $this->db->prepare('UPDATE courses SET name = :name, description = :description, workload = :workload, instructor = :instructor, period = :period, date = :date, time = :time, location = :location, cover_image = :cover_image, status = :status, allow_enrollment = :allow_enrollment, max_enrollments = :max_enrollments WHERE id = :id');
+        $stmt = $this->db->prepare('UPDATE courses SET name = :name, description = :description, target_audience = :target_audience, workload = :workload, instructor = :instructor, period = :period, date = :date, time = :time, location = :location, cover_image = :cover_image, status = :status, allow_enrollment = :allow_enrollment, max_enrollments = :max_enrollments WHERE id = :id');
         $stmt->execute([
             'id' => $id,
             'name' => $data['name'],
             'description' => $data['description'],
+            'target_audience' => $data['target_audience'] ?? null,
             'workload' => $data['workload'],
             'instructor' => $data['instructor'],
             'period' => $data['period'],

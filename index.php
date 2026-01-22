@@ -73,6 +73,35 @@ if (isset($_GET['migrate_db'])) {
             echo "<h1>Sucesso: Tabela 'organization_settings' criada e inicializada!</h1>";
         }
 
+        // Indices for Reports
+        try {
+            $pdo->exec("CREATE INDEX idx_enrollments_course_id ON enrollments(course_id)");
+            echo "<h1>Sucesso: Índice 'idx_enrollments_course_id' criado!</h1>";
+        } catch (Exception $e) {
+            // Index likely exists
+        }
+
+        try {
+            $pdo->exec("CREATE INDEX idx_enrollments_created_at ON enrollments(created_at)");
+            echo "<h1>Sucesso: Índice 'idx_enrollments_created_at' criado!</h1>";
+        } catch (Exception $e) {
+             // Index likely exists
+        }
+
+        try {
+            $pdo->exec("CREATE INDEX idx_courses_status ON courses(status)");
+            echo "<h1>Sucesso: Índice 'idx_courses_status' criado!</h1>";
+        } catch (Exception $e) {
+             // Index likely exists
+        }
+
+        try {
+            $pdo->exec("CREATE INDEX idx_courses_created_at ON courses(created_at)");
+            echo "<h1>Sucesso: Índice 'idx_courses_created_at' criado!</h1>";
+        } catch (Exception $e) {
+             // Index likely exists
+        }
+
         echo '<p><a href="index.php?r=auth/register">Ir para Cadastro</a></p>';
         exit;
     } catch (Exception $e) {

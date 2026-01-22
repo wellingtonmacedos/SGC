@@ -165,6 +165,11 @@ function jsonSafe(array $data): string {
                             <textarea name="description" id="courseDescription" class="form-control" rows="3" required></textarea>
                         </div>
 
+                        <div class="col-md-12">
+                            <label class="form-label">Público Alvo</label>
+                            <textarea name="target_audience" id="courseTargetAudience" class="form-control" rows="2"></textarea>
+                        </div>
+
                         <div class="col-md-6">
                             <label class="form-label"><i class="fas fa-users-cog me-1"></i>Limite de Inscrições</label>
                             <input type="number" name="max_enrollments" id="courseMaxEnrollments" class="form-control" min="0" placeholder="0 para ilimitado">
@@ -252,6 +257,7 @@ function editCourse(course) {
     document.getElementById('courseId').value = course.id;
     document.getElementById('courseName').value = course.name;
     document.getElementById('courseDescription').value = course.description;
+    document.getElementById('courseTargetAudience').value = course.target_audience || '';
     document.getElementById('courseInstructor').value = course.instructor;
     document.getElementById('courseWorkload').value = course.workload;
     document.getElementById('courseDate').value = course.date || '';

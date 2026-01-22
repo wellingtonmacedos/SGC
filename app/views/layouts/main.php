@@ -42,7 +42,7 @@ function formatTimeBr(?string $value): string
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SGC</title>
+    <title><?php echo isset($pageTitle) ? e($pageTitle) . ' - SGC' : 'SGC'; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -144,6 +144,44 @@ function formatTimeBr(?string $value): string
         .stat-card-blue { background: linear-gradient(135deg, #1d3557 0%, #457b9d 100%); }
         .stat-card-green { background: linear-gradient(135deg, #2a9d8f 0%, #264653 100%); }
         .stat-card-red { background: linear-gradient(135deg, #e63946 0%, #d62828 100%); }
+        .stat-card-orange { background: linear-gradient(135deg, #f09819 0%, #edde5d 100%); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .stat-card-purple { background: linear-gradient(135deg, #8e44ad 0%, #c0392b 100%); }
+        .stat-card-info { background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%); }
+        
+        .report-card {
+            border: none;
+            border-radius: 10px;
+            transition: all 0.3s;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            height: 100%;
+        }
+        .report-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .report-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: var(--accent-color);
+        }
+        
+        /* Card Hover Effects */
+        .hover-shadow:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        }
+        .btn-hover-effect {
+            transition: all 0.3s;
+        }
+        .btn-hover-effect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(13, 110, 253, 0.3);
+        }
+        .width-20 {
+            width: 20px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -152,8 +190,12 @@ function formatTimeBr(?string $value): string
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="user-profile">
-            <div class="user-avatar">
-                <i class="fas fa-user-secret"></i>
+            <div class="user-avatar" style="overflow: hidden; padding: 0;">
+                <?php if (!empty($user['photo'])): ?>
+                    <img src="index.php?r=file/photo&file=<?php echo urlencode($user['photo']); ?>" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;">
+                <?php else: ?>
+                    <img src="assets/img/default-user.png" alt="Foto Padrão" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.parentNode.innerHTML='<i class=\'fas fa-user-secret\'></i>';">
+                <?php endif; ?>
             </div>
             <div class="fw-bold mb-1"><?php echo e($user['name']); ?></div>
             <div class="small opacity-75 text-truncate"><?php echo e($user['email']); ?></div>
@@ -166,11 +208,14 @@ function formatTimeBr(?string $value): string
             ?>
             
             <?php if ($user['role'] === 'candidate'): ?>
-                <a class="nav-link <?php echo $route === 'candidate/dashboard' && $section !== 'enrollments' ? 'active' : ''; ?>" href="index.php?r=candidate/dashboard">
+                <a class="nav-link <?php echo $route === 'candidate/dashboard' ? 'active' : ''; ?>" href="index.php?r=candidate/dashboard">
                     <i class="fas fa-desktop"></i> Painel
                 </a>
-                <a class="nav-link <?php echo $route === 'candidate/dashboard' && $section === 'enrollments' ? 'active' : ''; ?>" href="index.php?r=candidate/dashboard&section=enrollments#enrollments">
+                <a class="nav-link <?php echo $route === 'candidate/enrollments' ? 'active' : ''; ?>" href="index.php?r=candidate/enrollments">
                     <i class="fas fa-list"></i> Minhas Inscrições
+                </a>
+                <a class="nav-link <?php echo $route === 'candidate/certificates' ? 'active' : ''; ?>" href="index.php?r=candidate/certificates">
+                    <i class="fas fa-certificate"></i> Meus Certificados
                 </a>
                 <a class="nav-link <?php echo $route === 'candidate/profile' ? 'active' : ''; ?>" href="index.php?r=candidate/profile">
                     <i class="fas fa-user-edit"></i> Editar Perfil
@@ -190,6 +235,9 @@ function formatTimeBr(?string $value): string
                 </a>
                 <a class="nav-link <?php echo $route === 'admin/certificates' ? 'active' : ''; ?>" href="index.php?r=admin/certificates">
                     <i class="fas fa-certificate"></i> Certificados
+                </a>
+                <a class="nav-link <?php echo strpos($route, 'report/') === 0 ? 'active' : ''; ?>" href="index.php?r=report/dashboard">
+                    <i class="fas fa-chart-pie"></i> Relatórios
                 </a>
                 <a class="nav-link <?php echo $route === 'organization' ? 'active' : ''; ?>" href="index.php?r=organization">
                     <i class="fas fa-building"></i> Configurações do Órgão
