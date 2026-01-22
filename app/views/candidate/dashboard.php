@@ -44,6 +44,115 @@ foreach ($enrollments as $enr) {
     </div>
 </div>
 
+<!-- My Enrollments -->
+<?php if (!empty($enrollments)): ?>
+    <div class="card border-0 shadow-sm mb-5" id="enrollments">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-list me-2"></i>Minhas Inscrições</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Curso</th>
+                            <th>Data Inscrição</th>
+                            <th>Status</th>
+                            <th class="text-end pe-4">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($enrollments as $enrollment): ?>
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold"><?php echo e($enrollment['course_name']); ?></div>
+                                    <div class="small text-muted"><?php echo e($enrollment['course_location'] ?? ''); ?></div>
+                                </td>
+                                <td><?php echo formatDateBr($enrollment['created_at']); ?></td>
+                                <td>
+                                    <?php
+                                    $statusClass = 'bg-secondary';
+                                    $statusLabel = $enrollment['status'];
+                                    
+                                    switch ($enrollment['status']) {
+                                        case 'pending':
+                                            $statusClass = 'bg-warning text-dark';
+                                            $statusLabel = 'Pendente';
+                                            break;
+                                        case 'confirmed':
+                                            $statusClass = 'bg-primary';
+                                            $statusLabel = 'Confirmado';
+                                            break;
+                                        case 'completed':
+                                            $statusClass = 'bg-success';
+                                            $statusLabel = 'Concluído';
+                                            break;
+                                        case 'cancelled':
+                                            $statusClass = 'bg-danger';
+                                            $statusLabel = 'Cancelado';
+                                            break;
+                                        case 'certificate_available':
+                                            $statusClass = 'bg-success';
+                                            $statusLabel = 'Certificado Disponível';
+                                            break;
+                                    }
+                                    ?>
+                                    <span class="badge <?php echo $statusClass; ?> rounded-pill">
+                                        <?php echo e($statusLabel); ?>
+                                    </span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a href="index.php?r=candidate/courseDetails&id=<?php echo $enrollment['course_id']; ?>" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> Detalhes
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+
+<!-- My Certificates -->
+<?php if (!empty($certificates)): ?>
+    <div class="card border-0 shadow-sm mb-5" id="certificates">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-certificate me-2"></i>Meus Certificados</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Curso</th>
+                            <th>Data Emissão</th>
+                            <th class="text-end pe-4">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($certificates as $cert): ?>
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold"><?php echo e($cert['course_name'] ?? 'Curso não identificado'); ?></div>
+                                    <div class="small text-muted">Código: <?php echo e($cert['validation_code']); ?></div>
+                                </td>
+                                <td><?php echo formatDateBr($cert['issued_at']); ?></td>
+                                <td class="text-end pe-4">
+                                    <a href="index.php?r=candidate/downloadCertificate&id=<?php echo $cert['id']; ?>" class="btn btn-sm btn-success" target="_blank">
+                                        <i class="fas fa-download me-1"></i> Baixar
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+
 <!-- Available Courses Section -->
 <div class="mb-5">
     <h4 class="text-center mb-4 fw-bold text-dark">Cursos e Palestras Disponíveis</h4>

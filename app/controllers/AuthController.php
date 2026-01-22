@@ -17,23 +17,29 @@ class AuthController extends Controller
         $error = '';
 
         if ($this->isPost()) {
-            $email = $this->getPostString('email');
+            $identifier = $this->getPostString('identifier');
             $password = $this->getPostString('password');
 
             $userModel = new User();
-            $user = $userModel->findByEmail($email);
+            $user = $userModel->findByIdentifier($identifier);
 
             if ($user && password_verify($password, $user['password_hash'])) {
-                Auth::login($user);
-                
-                if (isset($user['force_password_change']) && $user['force_password_change']) {
-                    $this->redirect('candidate/change-password');
-                }
-
-                if ($user['role'] === 'admin') {
-                    $this->redirect('admin/dashboard');
+                if (isset($user['status']) && $user['status'] === 'inactive') {
+                    $error = 'Usuário inativo. Entre em contato com o administrador.';
                 } else {
-                    $this->redirect('candidate/dashboard');
+                    Auth::login($user);
+                    
+                    if (isset($user['force_password_change']) && $user['force_password_change']) {
+                        $this->redirect('candidate/change-password');
+                    }
+
+                    if ($user['role'] === 'super_admin') {
+                        $this->redirect('superAdmin/dashboard');
+                    } elseif ($user['role'] === 'admin') {
+                        $this->redirect('admin/dashboard');
+                    } else {
+                        $this->redirect('candidate/dashboard');
+                    }
                 }
             } else {
                 $error = 'Credenciais inválidas';

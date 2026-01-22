@@ -208,17 +208,30 @@ function formatTimeBr(?string $value): string
             ?>
             
             <?php if ($user['role'] === 'candidate'): ?>
-                <a class="nav-link <?php echo $route === 'candidate/dashboard' ? 'active' : ''; ?>" href="index.php?r=candidate/dashboard">
+                <a class="nav-link <?php echo $route === 'candidate/dashboard' && $section !== 'enrollments' && $section !== 'certificates' ? 'active' : ''; ?>" href="index.php?r=candidate/dashboard">
                     <i class="fas fa-desktop"></i> Painel
                 </a>
-                <a class="nav-link <?php echo $route === 'candidate/enrollments' ? 'active' : ''; ?>" href="index.php?r=candidate/enrollments">
+                <a class="nav-link <?php echo $route === 'candidate/dashboard' && $section === 'enrollments' ? 'active' : ''; ?>" href="index.php?r=candidate/dashboard&section=enrollments#enrollments">
                     <i class="fas fa-list"></i> Minhas Inscrições
                 </a>
-                <a class="nav-link <?php echo $route === 'candidate/certificates' ? 'active' : ''; ?>" href="index.php?r=candidate/certificates">
+                <a class="nav-link <?php echo $route === 'candidate/dashboard' && $section === 'certificates' ? 'active' : ''; ?>" href="index.php?r=candidate/dashboard&section=certificates#certificates">
                     <i class="fas fa-certificate"></i> Meus Certificados
                 </a>
                 <a class="nav-link <?php echo $route === 'candidate/profile' ? 'active' : ''; ?>" href="index.php?r=candidate/profile">
                     <i class="fas fa-user-edit"></i> Editar Perfil
+                </a>
+            <?php elseif ($user['role'] === 'super_admin'): ?>
+                <a class="nav-link <?php echo $route === 'superAdmin/dashboard' ? 'active' : ''; ?>" href="index.php?r=superAdmin/dashboard">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </a>
+                <a class="nav-link <?php echo $route === 'superAdmin/admins' ? 'active' : ''; ?>" href="index.php?r=superAdmin/admins">
+                    <i class="fas fa-users-cog"></i> Administradores
+                </a>
+                <a class="nav-link <?php echo $route === 'superAdmin/backups' ? 'active' : ''; ?>" href="index.php?r=superAdmin/backups">
+                    <i class="fas fa-database"></i> Backups
+                </a>
+                <a class="nav-link <?php echo $route === 'superAdmin/reports' ? 'active' : ''; ?>" href="index.php?r=superAdmin/reports">
+                    <i class="fas fa-chart-pie"></i> Relatórios
                 </a>
             <?php elseif ($user['role'] === 'admin'): ?>
                 <a class="nav-link <?php echo $route === 'admin/dashboard' ? 'active' : ''; ?>" href="index.php?r=admin/dashboard">

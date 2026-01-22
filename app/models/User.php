@@ -32,6 +32,28 @@ class User extends Model
         return $user ?: null;
     }
 
+    public function findByIdentifier(string $identifier): ?array
+    {
+        $cleanCpf = preg_replace('/[^0-9]/', '', $identifier);
+        
+        // Use unique placeholders to avoid PDO issues with parameter reuse
+        $sql = 'SELECT * FROM users WHERE email = :identifier_email OR username = :identifier_username';
+        $params = [
+            'identifier_email' => $identifier,
+            'identifier_username' => $identifier
+        ];
+        
+        if (!empty($cleanCpf) && strlen($cleanCpf) === 11) {
+             $sql .= ' OR cpf = :cleanCpf';
+             $params['cleanCpf'] = $cleanCpf;
+        }
+
+        $stmt = $this->db->prepare($sql . ' LIMIT 1');
+        $stmt->execute($params);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $user ?: null;
+    }
+
     public function findById(int $id): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
@@ -78,6 +100,13 @@ class User extends Model
         ]);
     }
 
+    public function countAdmins(): int
+    {
+        $stmt = $this->db->query("SELECT COUNT(*) AS total FROM users WHERE role = 'admin'");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$row['total'];
+    }
+
     public function countCandidates(): int
     {
         $stmt = $this->db->query("SELECT COUNT(*) AS total FROM users WHERE role = 'candidate'");
@@ -90,6 +119,55 @@ class User extends Model
         $stmt = $this->db->query("SELECT id, name, email, cpf, username, phone, address, photo FROM users WHERE role = 'candidate' ORDER BY name");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function listAdmins(): array
+    {
+        $stmt = $this->db->query("SELECT id, name, email, cpf, username, phone, address, photo, status, created_at FROM users WHERE role = 'admin' ORDER BY name");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function createAdmin(string $name, string $cpf, string $email, string $passwordHash, string $username): int
+    {
+        $stmt = $this->db->prepare('INSERT INTO users (name, cpf, email, password_hash, username, role, created_at) VALUES (:name, :cpf, :email, :password_hash, :username, "admin", NOW())');
+        $stmt->execute([
+            'name' => $name,
+            'cpf' => $cpf,
+            'email' => $email,
+            'password_hash' => $passwordHash,
+            'username' => $username,
+        ]);
+
+        return (int)$this->db->lastInsertId();
+    }
+
+    public function updateAdmin(int $id, string $name, string $cpf, string $email, string $username, string $status = 'active'): void
+    {
+        $stmt = $this->db->prepare('UPDATE users SET name = :name, cpf = :cpf, email = :email, username = :username, status = :status WHERE id = :id AND role = "admin"');
+        $stmt->execute([
+            'name' => $name,
+            'cpf' => $cpf,
+            'email' => $email,
+            'username' => $username,
+            'status' => $status,
+            'id' => $id,
+        ]);
+    }
+
+    public function updateStatus(int $id, string $status): void
+    {
+        $stmt = $this->db->prepare('UPDATE users SET status = :status WHERE id = :id');
+        $stmt->execute([
+            'status' => $status,
+            'id' => $id,
+        ]);
+    }
+
+    public function deleteAdmin(int $id): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM users WHERE id = :id AND role = "admin"');
+        $stmt->execute(['id' => $id]);
+    }
+
 
     public function updatePassword(int $id, string $passwordHash, bool $forceChange = false): void
     {

@@ -172,7 +172,7 @@ class CandidateController extends Controller
                         Mailer::send(MAIL_ADMIN_ADDRESS, $adminSubject, $adminMessage);
 
                         // Redirect to avoid form resubmission and show success
-                        $this->redirect('candidate/dashboard');
+                        $this->redirect('candidate/dashboard&section=enrollments#enrollments');
                     }
                 }
             }

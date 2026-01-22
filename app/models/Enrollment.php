@@ -19,6 +19,13 @@ class Enrollment extends Model
         return (int)$this->db->lastInsertId();
     }
 
+    public function countAll(): int
+    {
+        $stmt = $this->db->query('SELECT COUNT(*) AS total FROM enrollments');
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$row['total'];
+    }
+
     public function exists(int $userId, int $courseId): bool
     {
         $stmt = $this->db->prepare('SELECT id FROM enrollments WHERE user_id = :user_id AND course_id = :course_id LIMIT 1');
@@ -85,5 +92,17 @@ class Enrollment extends Model
         $stmt = $this->db->query("SELECT COUNT(*) AS total FROM enrollments WHERE status = 'certificate_available'");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return (int)$row['total'];
+    }
+
+    public function getMonthlyStats(): array
+    {
+        $stmt = $this->db->query("
+            SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as total 
+            FROM enrollments 
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+            GROUP BY month 
+            ORDER BY month ASC
+        ");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

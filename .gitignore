@@ -6,6 +6,9 @@ storage/photos/*
 !storage/photos/.htaccess
 storage/organization/*
 !storage/organization/.htaccess
+storage/backups/*
+!storage/backups/.htaccess
+backups/
 *.log
 .DS_Store
 Thumbs.db
