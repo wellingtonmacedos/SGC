@@ -9,6 +9,7 @@ storage/organization/*
 storage/backups/*
 !storage/backups/.htaccess
 backups/
+config.php
 *.log
 .DS_Store
 Thumbs.db

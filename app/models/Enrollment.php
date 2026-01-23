@@ -105,4 +105,31 @@ class Enrollment extends Model
         ");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function getReportStats(string $startDate, string $endDate, ?int $courseId = null, ?string $status = null): array
+    {
+        $sql = "SELECT e.*, c.name as course_name, u.name as user_name, u.email, u.cpf 
+                FROM enrollments e 
+                JOIN courses c ON c.id = e.course_id 
+                JOIN users u ON u.id = e.user_id 
+                WHERE e.created_at BETWEEN :start AND :end";
+        
+        $params = ['start' => $startDate . ' 00:00:00', 'end' => $endDate . ' 23:59:59'];
+        
+        if ($courseId) {
+            $sql .= " AND e.course_id = :course_id";
+            $params['course_id'] = $courseId;
+        }
+        
+        if ($status) {
+            $sql .= " AND e.status = :status";
+            $params['status'] = $status;
+        }
+        
+        $sql .= " ORDER BY e.created_at DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

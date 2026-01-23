@@ -63,6 +63,11 @@ class Course extends Model
         $course = $stmt->fetch(PDO::FETCH_ASSOC);
         return $course ?: null;
     }
+    
+    public function findById(int $id): ?array
+    {
+        return $this->find($id);
+    }
 
     public function all(): array
     {
@@ -73,6 +78,77 @@ class Course extends Model
                 ORDER BY c.name';
         $stmt = $this->db->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function paginate(int $page = 1, int $perPage = 10, array $filters = []): array
+    {
+        $offset = ($page - 1) * $perPage;
+        
+        $where = [];
+        $params = [];
+        
+        if (!empty($filters['name'])) {
+            $where[] = 'c.name LIKE :name';
+            $params['name'] = '%' . $filters['name'] . '%';
+        }
+        
+        if (!empty($filters['status'])) {
+            $where[] = 'c.status = :status';
+            $params['status'] = $filters['status'];
+        }
+
+        $whereSql = '';
+        if (!empty($where)) {
+            $whereSql = 'WHERE ' . implode(' AND ', $where);
+        }
+        
+        // Main query
+        $sql = "SELECT c.*, COUNT(e.id) as enrollments_count 
+                FROM courses c 
+                LEFT JOIN enrollments e ON c.id = e.course_id 
+                $whereSql
+                GROUP BY c.id 
+                ORDER BY c.created_at DESC 
+                LIMIT :limit OFFSET :offset";
+                
+        $stmt = $this->db->prepare($sql);
+        
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        
+        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function countFiltered(array $filters = []): int
+    {
+        $where = [];
+        $params = [];
+        
+        if (!empty($filters['name'])) {
+            $where[] = 'name LIKE :name';
+            $params['name'] = '%' . $filters['name'] . '%';
+        }
+        
+        if (!empty($filters['status'])) {
+            $where[] = 'status = :status';
+            $params['status'] = $filters['status'];
+        }
+
+        $whereSql = '';
+        if (!empty($where)) {
+            $whereSql = 'WHERE ' . implode(' AND ', $where);
+        }
+
+        $sql = "SELECT COUNT(*) as total FROM courses $whereSql";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$row['total'];
     }
 
     public function availableForEnrollment(): array
@@ -87,9 +163,81 @@ class Course extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function paginateAvailable(int $page = 1, int $perPage = 10, array $filters = []): array
+    {
+        $offset = ($page - 1) * $perPage;
+        
+        $where = ["c.status = 'active'", "c.allow_enrollment = 1"];
+        $params = [];
+        
+        if (!empty($filters['search'])) {
+            $where[] = '(c.name LIKE :search OR c.location LIKE :search)';
+            $params['search'] = '%' . $filters['search'] . '%';
+        }
+        
+        if (!empty($filters['date'])) {
+            $where[] = 'c.date = :date';
+            $params['date'] = $filters['date'];
+        }
+
+        $whereSql = 'WHERE ' . implode(' AND ', $where);
+        
+        $sql = "SELECT c.*, COUNT(e.id) as enrollments_count 
+                FROM courses c 
+                LEFT JOIN enrollments e ON c.id = e.course_id 
+                $whereSql
+                GROUP BY c.id 
+                ORDER BY c.date ASC, c.name ASC
+                LIMIT :limit OFFSET :offset";
+                
+        $stmt = $this->db->prepare($sql);
+        
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        
+        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function countAvailableFiltered(array $filters = []): int
+    {
+        $where = ["status = 'active'", "allow_enrollment = 1"];
+        $params = [];
+        
+        if (!empty($filters['search'])) {
+            $where[] = '(name LIKE :search OR location LIKE :search)';
+            $params['search'] = '%' . $filters['search'] . '%';
+        }
+        
+        if (!empty($filters['date'])) {
+            $where[] = 'date = :date';
+            $params['date'] = $filters['date'];
+        }
+
+        $whereSql = 'WHERE ' . implode(' AND ', $where);
+
+        $sql = "SELECT COUNT(*) as total FROM courses $whereSql";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$row['total'];
+    }
+
     public function countAll(): int
     {
         $stmt = $this->db->query('SELECT COUNT(*) AS total FROM courses');
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$row['total'];
+    }
+
+    public function countByStatus(string $status): int
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) AS total FROM courses WHERE status = :status');
+        $stmt->execute(['status' => $status]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return (int)$row['total'];
     }

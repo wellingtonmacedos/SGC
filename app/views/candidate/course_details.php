@@ -119,7 +119,7 @@
             </div>
             <div class="col-lg-5 d-none d-lg-block">
                 <?php if (!empty($course['cover_image'])): ?>
-                    <img src="index.php?r=file/cover&file=<?php echo urlencode($course['cover_image']); ?>" class="img-fluid rounded-3 shadow-lg" alt="Capa do curso" style="transform: rotate(2deg); border: 5px solid rgba(255,255,255,0.2);">
+                    <img src="index.php?r=file/cover&file=<?php echo urlencode($course['cover_image']); ?>" class="img-fluid rounded-3 shadow-lg" alt="Capa do curso" loading="lazy" style="transform: rotate(2deg); border: 5px solid rgba(255,255,255,0.2);">
                 <?php else: ?>
                     <div class="bg-white rounded-3 shadow-lg p-5 text-center" style="transform: rotate(2deg); height: 300px; display: flex; align-items: center; justify-content: center;">
                         <i class="fas fa-graduation-cap fa-5x text-muted"></i>

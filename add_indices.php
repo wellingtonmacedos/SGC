@@ -4,7 +4,7 @@ require_once 'app/core/Database.php';
 
 use App\Core\Database;
 
-$db = Database::getInstance();
+$db = Database::getConnection();
 
 echo "Verificando e criando índices...\n";
 
@@ -31,5 +31,6 @@ addIndex($db, 'enrollments', 'created_at', 'idx_enrollments_created_at');
 // Courses indices
 addIndex($db, 'courses', 'status', 'idx_courses_status');
 addIndex($db, 'courses', 'created_at', 'idx_courses_created_at');
+addIndex($db, 'courses', 'date', 'idx_courses_date');
 
 echo "Concluído.\n";

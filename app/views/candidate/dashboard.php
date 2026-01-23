@@ -184,7 +184,7 @@ foreach ($enrollments as $enr) {
                     <div class="card h-100 border-0 shadow-sm hover-shadow transition w-100" style="border-radius: 15px; overflow: hidden;">
                         <?php if (!empty($course['cover_image'])): ?>
                             <div style="height: 200px; overflow: hidden;">
-                                <img src="index.php?r=file/cover&file=<?php echo urlencode($course['cover_image']); ?>" class="card-img-top" alt="Capa do curso" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
+                                <img src="index.php?r=file/cover&file=<?php echo urlencode($course['cover_image']); ?>" class="card-img-top" alt="Capa do curso" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
                             </div>
                         <?php else: ?>
                             <div class="card-img-top text-white d-flex align-items-center justify-content-center" style="height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
@@ -251,6 +251,37 @@ foreach ($enrollments as $enr) {
                 </div>
             <?php endforeach; ?>
         </div>
+
+        <!-- Pagination -->
+        <?php if (isset($totalPages) && $totalPages > 1): ?>
+            <nav aria-label="Navegação de páginas" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <!-- Previous -->
+                    <li class="page-item <?php echo ($currentPage <= 1) ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="index.php?r=candidate/dashboard&page=<?php echo $currentPage - 1; ?>&q=<?php echo urlencode($filterSearch); ?>&date=<?php echo urlencode($filterDate); ?>" aria-label="Anterior">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    
+                    <!-- Pages -->
+                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                        <li class="page-item <?php echo ($currentPage == $i) ? 'active' : ''; ?>">
+                            <a class="page-link" href="index.php?r=candidate/dashboard&page=<?php echo $i; ?>&q=<?php echo urlencode($filterSearch); ?>&date=<?php echo urlencode($filterDate); ?>">
+                                <?php echo $i; ?>
+                            </a>
+                        </li>
+                    <?php endfor; ?>
+                    
+                    <!-- Next -->
+                    <li class="page-item <?php echo ($currentPage >= $totalPages) ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="index.php?r=candidate/dashboard&page=<?php echo $currentPage + 1; ?>&q=<?php echo urlencode($filterSearch); ?>&date=<?php echo urlencode($filterDate); ?>" aria-label="Próximo">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        <?php endif; ?>
+
     <?php endif; ?>
 </div>
 

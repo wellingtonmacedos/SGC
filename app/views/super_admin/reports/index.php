@@ -9,8 +9,8 @@
                 <i class="fas fa-download me-2"></i>Exportar
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="index.php?r=superAdmin/exportReports&format=csv"><i class="fas fa-file-csv me-2"></i>CSV (Excel)</a></li>
-                <li><a class="dropdown-item" href="javascript:window.print()"><i class="fas fa-print me-2"></i>Imprimir / PDF</a></li>
+                <li><a class="dropdown-item" href="index.php?r=superAdmin/exportReports&format=csv&start_date=<?= $filters['start_date'] ?>&end_date=<?= $filters['end_date'] ?>&course_id=<?= $filters['course_id'] ?>&status=<?= $filters['status'] ?>"><i class="fas fa-file-csv me-2"></i>CSV (Excel)</a></li>
+                <li><a class="dropdown-item" href="index.php?r=superAdmin/exportReports&format=pdf&start_date=<?= $filters['start_date'] ?>&end_date=<?= $filters['end_date'] ?>&course_id=<?= $filters['course_id'] ?>&status=<?= $filters['status'] ?>" target="_blank"><i class="fas fa-print me-2"></i>Imprimir / PDF</a></li>
             </ul>
         </div>
     </div>
@@ -134,6 +134,105 @@
                     </ul>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Filters and Detailed Report -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-transparent border-bottom py-3">
+            <h5 class="card-title mb-0">Relatório Detalhado de Inscrições</h5>
+        </div>
+        <div class="card-body">
+            <!-- Filter Form -->
+            <form action="index.php" method="GET" class="row g-3 mb-4 align-items-end">
+                <input type="hidden" name="r" value="superAdmin/reports">
+                
+                <div class="col-md-3">
+                    <label for="start_date" class="form-label">Data Inicial</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" value="<?php echo $filters['start_date']; ?>">
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="end_date" class="form-label">Data Final</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" value="<?php echo $filters['end_date']; ?>">
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="course_id" class="form-label">Curso</label>
+                    <select class="form-select" id="course_id" name="course_id">
+                        <option value="">Todos os Cursos</option>
+                        <?php foreach ($courses as $course): ?>
+                            <option value="<?php echo $course['id']; ?>" <?php echo ($filters['course_id'] == $course['id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($course['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">Todos</option>
+                        <option value="confirmed" <?php echo ($filters['status'] === 'confirmed') ? 'selected' : ''; ?>>Confirmado</option>
+                        <option value="pending" <?php echo ($filters['status'] === 'pending') ? 'selected' : ''; ?>>Pendente</option>
+                        <option value="cancelled" <?php echo ($filters['status'] === 'cancelled') ? 'selected' : ''; ?>>Cancelado</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i></button>
+                </div>
+            </form>
+
+            <!-- Results Table -->
+            <?php if (empty($reportData)): ?>
+                <div class="alert alert-info text-center">
+                    Nenhum registro encontrado para os filtros selecionados.
+                </div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Data</th>
+                                <th>Curso</th>
+                                <th>Candidato</th>
+                                <th>Email</th>
+                                <th>CPF</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($reportData as $row): ?>
+                                <tr>
+                                    <td><?php echo date('d/m/Y H:i', strtotime($row['created_at'])); ?></td>
+                                    <td><?php echo htmlspecialchars($row['course_name']); ?></td>
+                                    <td><?php echo htmlspecialchars($row['user_name']); ?></td>
+                                    <td><?php echo htmlspecialchars($row['email']); ?></td>
+                                    <td><?php echo htmlspecialchars($row['cpf']); ?></td>
+                                    <td>
+                                        <?php
+                                        $statusClass = match($row['status']) {
+                                            'confirmed' => 'success',
+                                            'pending' => 'warning',
+                                            'cancelled' => 'danger',
+                                            default => 'secondary'
+                                        };
+                                        $statusLabel = match($row['status']) {
+                                            'confirmed' => 'Confirmado',
+                                            'pending' => 'Pendente',
+                                            'cancelled' => 'Cancelado',
+                                            default => $row['status']
+                                        };
+                                        ?>
+                                        <span class="badge bg-<?php echo $statusClass; ?>"><?php echo $statusLabel; ?></span>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>

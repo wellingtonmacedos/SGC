@@ -178,25 +178,17 @@ class CandidateController extends Controller
             }
         }
 
-        $availableCourses = $courseModel->availableForEnrollment();
+        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+        $perPage = 6;
+
+        $filters = [];
+        if ($filterDate !== '') $filters['date'] = $filterDate;
+        if ($filterSearch !== '') $filters['search'] = $filterSearch;
+
+        $totalCourses = $courseModel->countAvailableFiltered($filters);
+        $totalPages = ceil($totalCourses / $perPage);
+        $availableCourses = $courseModel->paginateAvailable($page, $perPage, $filters);
         
-        if ($filterDate !== '' || $filterSearch !== '') {
-            $availableCourses = array_values(array_filter($availableCourses, static function (array $course) use ($filterDate, $filterSearch): bool {
-                if ($filterDate !== '' && (!isset($course['date']) || $course['date'] !== $filterDate)) {
-                    return false;
-                }
-                if ($filterSearch !== '') {
-                    $search = mb_strtolower($filterSearch);
-                    $name = isset($course['name']) ? mb_strtolower($course['name']) : '';
-                    $location = isset($course['location']) ? mb_strtolower($course['location']) : '';
-                    
-                    if (strpos($name, $search) === false && strpos($location, $search) === false) {
-                        return false;
-                    }
-                }
-                return true;
-            }));
-        }
         $enrollments = $enrollmentModel->listByUser($user['id']);
         $certificates = $certificateModel->listByUser($user['id']);
 
@@ -208,7 +200,10 @@ class CandidateController extends Controller
             'filterDate' => $filterDate,
             'filterSearch' => $filterSearch,
             'error' => $error,
-            'pageTitle' => 'Painel do Candidato'
+            'pageTitle' => 'Painel do Candidato',
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'totalCourses' => $totalCourses
         ]);
     }
 

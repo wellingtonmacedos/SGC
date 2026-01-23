@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Backup;
 use App\Models\Enrollment;
 use App\Models\Course;
+use App\Models\Log;
 use ZipArchive;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
@@ -71,7 +72,11 @@ class SuperAdminController extends Controller
                     $error = 'Usuário já cadastrado.';
                 } else {
                     try {
-                        $userModel->createAdmin($name, $email, $cpf, $username, $password);
+                        $newId = $userModel->createAdmin($name, $email, $cpf, $username, $password);
+                        
+                        $logModel = new Log();
+                        $logModel->create('admin_created', "Novo administrador criado: $username ($email)", (int)Auth::user()['id']);
+                        
                         header('Location: index.php?r=superAdmin/admins&success=created');
                         exit;
                     } catch (\Exception $e) {
@@ -112,18 +117,18 @@ class SuperAdminController extends Controller
             try {
                 $userModel->updateAdmin($id, $name, $email, $cpf, $username, $status);
                 
+                $logDetails = "Admin atualizado: $username (ID: $id)";
                 if (!empty($password)) {
                     $userModel->updatePassword($id, $password);
+                    $logDetails .= " - Senha alterada";
                     if ($forceChange) {
-                        // Assuming updateForcePasswordChange exists or using raw query if needed
-                        // For now let's assume updatePassword handles it or add separate method
-                        // Checking User model capabilities...
-                        // Let's use direct update for force_password_change if method doesn't exist
-                        // Actually I recall implementing force_password_change in previous memory
-                        // but let's stick to basic update first.
                         $userModel->forcePasswordChange($id);
+                        $logDetails .= " (Forçar troca)";
                     }
                 }
+                
+                $logModel = new Log();
+                $logModel->create('admin_updated', $logDetails, (int)Auth::user()['id']);
                 
                 header('Location: index.php?r=superAdmin/admins&success=updated');
                 exit;
@@ -148,6 +153,9 @@ class SuperAdminController extends Controller
         if ($admin && $admin['role'] === 'admin') {
             $newStatus = ($admin['status'] === 'active') ? 'inactive' : 'active';
             $userModel->updateStatus($id, $newStatus);
+            
+            $logModel = new Log();
+            $logModel->create('admin_status_changed', "Status do admin ID $id alterado para $newStatus", (int)Auth::user()['id']);
         }
         
         header('Location: index.php?r=superAdmin/admins');
@@ -162,6 +170,9 @@ class SuperAdminController extends Controller
 
         if ($admin && $admin['role'] === 'admin') {
             $userModel->deleteAdmin($id);
+            
+            $logModel = new Log();
+            $logModel->create('admin_deleted', "Admin removido: {$admin['username']} (ID: $id)", (int)Auth::user()['id']);
         }
         
         header('Location: index.php?r=superAdmin/admins');
@@ -249,6 +260,9 @@ class SuperAdminController extends Controller
             $user = Auth::user();
             $backupModel->create($type, $filename, 'backups/' . $filename, $size, (int)$user['id']);
             
+            $logModel = new Log();
+            $logModel->create('backup_created', "Backup criado: $filename ($type)", (int)$user['id']);
+
             header('Location: index.php?r=superAdmin/backups&success=created');
         } else {
             header('Location: index.php?r=superAdmin/backups&error=create_failed');
@@ -297,6 +311,9 @@ class SuperAdminController extends Controller
                 unlink($filepath);
             }
             $backupModel->delete($id);
+            
+            $logModel = new Log();
+            $logModel->create('backup_deleted', "Backup removido: {$backup['filename']} (ID: $id)", (int)Auth::user()['id']);
         }
 
         header('Location: index.php?r=superAdmin/backups&success=deleted');
@@ -342,6 +359,10 @@ class SuperAdminController extends Controller
             }
 
             $zip->close();
+            
+            $logModel = new Log();
+            $logModel->create('backup_restored', "Backup restaurado: {$backup['filename']} ({$backup['type']})", (int)Auth::user()['id']);
+            
             header('Location: index.php?r=superAdmin/backups&success=restored');
             exit;
 
@@ -358,51 +379,113 @@ class SuperAdminController extends Controller
         $courseModel = new Course();
         $enrollmentModel = new Enrollment();
 
+        // Filters
+        $startDate = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-01');
+        $endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-t');
+        $courseId = isset($_GET['course_id']) && $_GET['course_id'] !== '' ? (int)$_GET['course_id'] : null;
+        $status = isset($_GET['status']) && $_GET['status'] !== '' ? $_GET['status'] : null;
+
         $stats = [
             'total_candidates' => $userModel->countCandidates(),
             'total_admins' => $userModel->countAdmins(),
             'total_courses' => $courseModel->countAll(),
+            'active_courses' => $courseModel->countByStatus('active'),
+            'ended_courses' => $courseModel->countByStatus('inactive'),
             'total_enrollments' => $enrollmentModel->countAll(),
             'monthly_enrollments' => $enrollmentModel->getMonthlyStats(),
         ];
+        
+        // Filtered Report Data
+        $reportData = $enrollmentModel->getReportStats($startDate, $endDate, $courseId, $status);
+        $courses = $courseModel->all();
 
-        $this->render('super_admin/reports/index', ['stats' => $stats]);
+        $this->render('super_admin/reports/index', [
+            'stats' => $stats,
+            'reportData' => $reportData,
+            'courses' => $courses,
+            'filters' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'course_id' => $courseId,
+                'status' => $status
+            ]
+        ]);
     }
 
     public function exportReports(): void
     {
         $format = isset($_GET['format']) ? $_GET['format'] : 'csv';
         $enrollmentModel = new Enrollment();
-        $stats = $enrollmentModel->getMonthlyStats();
+        $courseModel = new Course();
+        
+        $startDate = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-01');
+        $endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-t');
+        $courseId = isset($_GET['course_id']) && $_GET['course_id'] !== '' ? (int)$_GET['course_id'] : null;
+        $status = isset($_GET['status']) && $_GET['status'] !== '' ? $_GET['status'] : null;
+        
+        $data = $enrollmentModel->getReportStats($startDate, $endDate, $courseId, $status);
 
         if ($format === 'csv') {
-            header('Content-Type: text/csv');
+            header('Content-Type: text/csv; charset=utf-8');
             header('Content-Disposition: attachment; filename="relatorio_inscricoes_' . date('Y-m-d') . '.csv"');
             
             $output = fopen('php://output', 'w');
+            fputs($output, "\xEF\xBB\xBF"); // BOM
             
-            // BOM for Excel
-            fputs($output, "\xEF\xBB\xBF");
+            // Header
+            fputcsv($output, ['Relatório de Inscrições'], ';');
+            fputcsv($output, ["Período: $startDate a $endDate"], ';');
+            fputcsv($output, [], ';');
             
-            fputcsv($output, ['Mês/Ano', 'Total de Inscrições']);
+            fputcsv($output, ['ID', 'Curso', 'Candidato', 'Email', 'CPF', 'Status', 'Data Inscrição'], ';');
             
-            foreach ($stats as $row) {
-                fputcsv($output, [$row['month'], $row['total']]);
+            foreach ($data as $row) {
+                fputcsv($output, [
+                    $row['id'],
+                    $row['course_name'],
+                    $row['user_name'],
+                    $row['email'],
+                    $row['cpf'],
+                    $row['status'],
+                    $row['created_at']
+                ], ';');
             }
             
             fclose($output);
             exit;
         } elseif ($format === 'pdf') {
-             // For now, redirect to print view or similar. 
-             // Since we don't have a PDF library, we can just print the page or offer a print-friendly HTML.
-             // Or simpler: just alert it's not implemented yet or redirect back.
-             // Let's implement a simple HTML print view for now.
-             $this->render('super_admin/reports/print', ['stats' => $stats]);
+             $this->render('super_admin/reports/print', [
+                 'data' => $data,
+                 'filters' => [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate
+                 ]
+             ]);
              exit;
         }
         
         header('Location: index.php?r=superAdmin/reports');
         exit;
+    }
+
+    // --- Logs ---
+    public function logs(): void
+    {
+        $logModel = new Log();
+        $logs = $logModel->getLatest(100);
+        $this->render('super_admin/logs/index', ['logs' => $logs]);
+    }
+
+    // --- Updates ---
+    public function updates(): void
+    {
+        $version = 'Desconhecida';
+        $versionFile = dirname(__DIR__, 2) . '/version.txt';
+        if (file_exists($versionFile)) {
+            $version = trim(file_get_contents($versionFile));
+        }
+        
+        $this->render('super_admin/updates/index', ['version' => $version]);
     }
 
     // --- Private Helpers ---

@@ -11,6 +11,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Organization;
 use App\Models\User;
+use App\Models\Log;
 
 class AdminController extends Controller
 {
@@ -40,77 +41,90 @@ class AdminController extends Controller
         Auth::requireAdmin();
         $courseModel = new Course();
         $error = '';
+        $success = isset($_GET['success']) ? 'Operação realizada com sucesso!' : '';
 
-        $filterDate = isset($_GET['date']) ? trim((string)$_GET['date']) : '';
-        $filterLocation = isset($_GET['location']) ? trim((string)$_GET['location']) : '';
+        // Pagination & Filtering
+        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+        $perPage = 10;
+        $searchName = isset($_GET['search']) ? trim($_GET['search']) : '';
+        $filterStatus = isset($_GET['filter_status']) ? trim($_GET['filter_status']) : '';
+        
+        $filters = [];
+        if ($searchName) $filters['name'] = $searchName;
+        if ($filterStatus) $filters['status'] = $filterStatus;
+        
+        $totalCourses = $courseModel->countFiltered($filters);
+        $totalPages = ceil($totalCourses / $perPage);
+        $courses = $courseModel->paginate($page, $perPage, $filters);
 
         if ($this->isPost()) {
-            $id = $this->getPostInt('id');
+            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
             $name = $this->getPostString('name');
             $description = $this->getPostString('description');
             $targetAudience = $this->getPostString('target_audience');
-            $workload = $this->getPostInt('workload');
+            $workload = $this->getPostString('workload');
             $instructor = $this->getPostString('instructor');
             $period = $this->getPostString('period');
-            $date = $this->getPostString('date');
+            $date = $this->getPostString('date'); // YYYY-MM-DD
             $time = $this->getPostString('time');
             $location = $this->getPostString('location');
-            $status = $this->getPostString('status') === 'inactive' ? 'inactive' : 'active';
-            $allowEnrollment = isset($_POST['allow_enrollment']) ? 1 : 0;
-            $maxEnrollments = $this->getPostInt('max_enrollments');
+            $status = $this->getPostString('status');
+            $allowEnrollment = isset($_POST['allow_enrollment']);
+            $maxEnrollments = isset($_POST['max_enrollments']) ? (int)$_POST['max_enrollments'] : 0;
 
-            if (!$name || !$description || !$instructor) {
-                $error = 'Preencha os campos obrigatórios';
+            if (empty($name) || empty($description)) {
+                $error = 'Nome e descrição são obrigatórios.';
             } else {
                 $coverImage = null;
                 if ($id > 0) {
-                    $existing = $courseModel->find($id);
-                    if ($existing && isset($existing['cover_image'])) {
+                    $existing = $courseModel->findById($id);
+                    if ($existing) {
                         $coverImage = $existing['cover_image'];
                     }
                 }
 
-                if (isset($_FILES['cover']) && $_FILES['cover']['error'] === UPLOAD_ERR_OK) {
-                    $file = $_FILES['cover'];
-                    if ($file['size'] > COURSE_COVER_MAX_SIZE) {
-                        $error = 'Capa excede o tamanho máximo permitido';
+                // Handle Cover Image Upload
+                if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
+                    $file = $_FILES['cover_image'];
+                    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $mimeType = $finfo->file($file['tmp_name']);
+
+                    if (!array_key_exists($mimeType, $allowed)) {
+                        $error = 'Formato de imagem inválido. Use JPG, PNG ou WebP.';
+                    } elseif ($file['size'] > COURSE_COVER_MAX_SIZE) {
+                        $error = 'A imagem excede o tamanho máximo de 2MB.';
                     } else {
-                        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-                        $mimeType = $finfo->file($file['tmp_name']);
-                        $allowed = [
-                            'image/jpeg' => 'jpg',
-                            'image/png' => 'png',
-                            'image/webp' => 'webp',
-                        ];
-                        if (!isset($allowed[$mimeType])) {
-                            $error = 'Apenas imagens JPG, PNG ou WEBP são permitidas para a capa';
+                        if (!is_dir(COURSE_COVER_PATH)) {
+                            mkdir(COURSE_COVER_PATH, 0775, true);
+                        }
+                        $extension = $allowed[$mimeType];
+                        $fileName = sha1_file($file['tmp_name']) . '_' . time() . '.' . $extension;
+                        $targetPath = COURSE_COVER_PATH . '/' . $fileName;
+                        if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+                            $error = 'Falha ao salvar a capa do curso';
                         } else {
-                            if (!is_dir(COURSE_COVER_PATH)) {
-                                mkdir(COURSE_COVER_PATH, 0775, true);
-                            }
-                            $extension = $allowed[$mimeType];
-                            $fileName = sha1_file($file['tmp_name']) . '_' . time() . '.' . $extension;
-                            $targetPath = COURSE_COVER_PATH . '/' . $fileName;
-                            if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-                                $error = 'Falha ao salvar a capa do curso';
-                            } else {
-                                if ($coverImage) {
-                                    $oldPath = COURSE_COVER_PATH . '/' . $coverImage;
-                                    if (is_file($oldPath)) {
-                                        unlink($oldPath);
-                                    }
+                            if ($coverImage) {
+                                $oldPath = COURSE_COVER_PATH . '/' . $coverImage;
+                                if (is_file($oldPath)) {
+                                    unlink($oldPath);
                                 }
-                                $coverImage = $fileName;
                             }
+                            $coverImage = $fileName;
                         }
                     }
                 }
 
                 if ($error) {
-                    $courses = $courseModel->all();
                     $this->render('admin/courses_v2', [
                         'courses' => $courses,
                         'error' => $error,
+                        'success' => $success,
+                        'currentPage' => $page,
+                        'totalPages' => $totalPages,
+                        'searchName' => $searchName,
+                        'filterStatus' => $filterStatus,
+                        'totalCourses' => $totalCourses
                     ]);
                     return;
                 }
@@ -133,41 +147,43 @@ class AdminController extends Controller
 
                 if ($id > 0) {
                     $courseModel->update($id, $data);
+                    
+                    $logModel = new Log();
+                    $logModel->create('course_updated', "Curso atualizado: $name (ID: $id)", (int)Auth::user()['id']);
                 } else {
-                    $courseModel->create($data);
+                    $newId = $courseModel->create($data);
+                    
+                    $logModel = new Log();
+                    $logModel->create('course_created', "Novo curso criado: $name (ID: $newId)", (int)Auth::user()['id']);
                 }
+                
+                $this->redirect('admin/courses&success=1');
             }
         }
 
         if (isset($_GET['delete'])) {
             $id = (int)$_GET['delete'];
             if ($id > 0) {
-                $courseModel->delete($id);
+                $course = $courseModel->findById($id);
+                if ($course) {
+                    $courseModel->delete($id);
+                    
+                    $logModel = new Log();
+                    $logModel->create('course_deleted', "Curso removido: {$course['name']} (ID: $id)", (int)Auth::user()['id']);
+                }
             }
             $this->redirect('admin/courses');
-        }
-
-        $courses = $courseModel->all();
-        if ($filterDate !== '' || $filterLocation !== '') {
-            $courses = array_values(array_filter($courses, static function (array $course) use ($filterDate, $filterLocation): bool {
-                if ($filterDate !== '' && (!isset($course['date']) || $course['date'] !== $filterDate)) {
-                    return false;
-                }
-                if ($filterLocation !== '') {
-                    $location = isset($course['location']) ? (string)$course['location'] : '';
-                    if ($location === '' || stripos($location, $filterLocation) === false) {
-                        return false;
-                    }
-                }
-                return true;
-            }));
         }
 
         $this->render('admin/courses_v2', [
             'courses' => $courses,
             'error' => $error,
-            'filterDate' => $filterDate,
-            'filterLocation' => $filterLocation,
+            'success' => $success,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'searchName' => $searchName,
+            'filterStatus' => $filterStatus,
+            'totalCourses' => $totalCourses
         ]);
     }
 
@@ -272,10 +288,13 @@ class AdminController extends Controller
 
                     if (!$error) {
                         $userModel->updateCandidateCompleto($id, $name, $cpf, $email, $username, $phone, $address, $photoPath);
+                        
+                        $logDetails = "Candidato atualizado: $username (ID: $id)";
 
                         if ($newPassword) {
                             $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
                             $userModel->updatePassword($id, $passwordHash, $forcePasswordChange);
+                            $logDetails .= " - Senha redefinida";
                             
                             $subject = 'Senha Redefinida pelo Administrador';
                             $message = "Olá " . htmlspecialchars($name) . ",\n\n";
@@ -284,6 +303,9 @@ class AdminController extends Controller
                             
                             Mailer::send($email, $subject, $message);
                         }
+
+                        $logModel = new Log();
+                        $logModel->create('candidate_updated_by_admin', $logDetails, (int)Auth::user()['id']);
 
                         $success = 'Dados atualizados com sucesso';
                         $candidate = $userModel->findById($id);

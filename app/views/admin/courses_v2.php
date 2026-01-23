@@ -23,13 +23,17 @@ function jsonSafe(array $data): string {
     <div class="card-body">
         <form method="get" class="row g-3 align-items-end">
             <input type="hidden" name="r" value="admin/courses">
-            <div class="col-md-4">
-                <label class="form-label text-muted small fw-bold">Filtrar por data</label>
-                <input type="date" name="date" class="form-control" value="<?php echo isset($filterDate) ? e($filterDate) : ''; ?>">
+            <div class="col-md-5">
+                <label class="form-label text-muted small fw-bold">Buscar por Nome</label>
+                <input type="text" name="search" class="form-control" placeholder="Nome do curso..." value="<?php echo isset($searchName) ? e($searchName) : ''; ?>">
             </div>
-            <div class="col-md-4">
-                <label class="form-label text-muted small fw-bold">Filtrar por local</label>
-                <input type="text" name="location" class="form-control" placeholder="Ex: Auditório..." value="<?php echo isset($filterLocation) ? e($filterLocation) : ''; ?>">
+            <div class="col-md-3">
+                <label class="form-label text-muted small fw-bold">Status</label>
+                <select name="filter_status" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="active" <?php echo (isset($filterStatus) && $filterStatus === 'active') ? 'selected' : ''; ?>>Ativo</option>
+                    <option value="inactive" <?php echo (isset($filterStatus) && $filterStatus === 'inactive') ? 'selected' : ''; ?>>Inativo</option>
+                </select>
             </div>
             <div class="col-md-4">
                 <div class="d-flex gap-2">
@@ -139,6 +143,59 @@ function jsonSafe(array $data): string {
                 </tbody>
             </table>
         </div>
+        
+        <!-- Pagination -->
+        <?php if (isset($totalPages) && $totalPages > 1): ?>
+        <div class="d-flex justify-content-center py-3 border-top">
+            <nav aria-label="Page navigation">
+                <ul class="pagination mb-0">
+                    <?php 
+                    $queryParams = $_GET;
+                    unset($queryParams['r']);
+                    
+                    $createLink = function($p) use ($queryParams) {
+                        $queryParams['page'] = $p;
+                        return 'index.php?r=admin/courses&' . http_build_query($queryParams);
+                    };
+                    ?>
+                    
+                    <li class="page-item <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="<?php echo $createLink($currentPage - 1); ?>" aria-label="Anterior">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    
+                    <?php 
+                    // Simple pagination logic to avoid too many links
+                    $start = max(1, $currentPage - 2);
+                    $end = min($totalPages, $currentPage + 2);
+                    
+                    if ($start > 1) {
+                        echo '<li class="page-item"><a class="page-link" href="'.$createLink(1).'">1</a></li>';
+                        if ($start > 2) echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                    }
+                    
+                    for ($i = $start; $i <= $end; $i++): ?>
+                        <li class="page-item <?php echo $i == $currentPage ? 'active' : ''; ?>">
+                            <a class="page-link" href="<?php echo $createLink($i); ?>"><?php echo $i; ?></a>
+                        </li>
+                    <?php endfor; 
+                    
+                    if ($end < $totalPages) {
+                        if ($end < $totalPages - 1) echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                        echo '<li class="page-item"><a class="page-link" href="'.$createLink($totalPages).'">'.$totalPages.'</a></li>';
+                    }
+                    ?>
+                    
+                    <li class="page-item <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="<?php echo $createLink($currentPage + 1); ?>" aria-label="Próximo">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 

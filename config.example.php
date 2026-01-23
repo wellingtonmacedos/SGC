@@ -29,5 +29,3 @@ define('ORGANIZATION_LOGO_MAX_SIZE', 2 * 1024 * 1024);
 
 require __DIR__ . '/app/core/Autoloader.php';
 App\Core\Autoloader::register();
-App\Core\Auth::ensureAdminUserExists();
-

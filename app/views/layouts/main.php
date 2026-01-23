@@ -233,6 +233,12 @@ function formatTimeBr(?string $value): string
                 <a class="nav-link <?php echo $route === 'superAdmin/reports' ? 'active' : ''; ?>" href="index.php?r=superAdmin/reports">
                     <i class="fas fa-chart-pie"></i> Relatórios
                 </a>
+                <a class="nav-link <?php echo $route === 'superAdmin/logs' ? 'active' : ''; ?>" href="index.php?r=superAdmin/logs">
+                    <i class="fas fa-history"></i> Logs
+                </a>
+                <a class="nav-link <?php echo $route === 'superAdmin/updates' ? 'active' : ''; ?>" href="index.php?r=superAdmin/updates">
+                    <i class="fas fa-sync-alt"></i> Atualizações
+                </a>
             <?php elseif ($user['role'] === 'admin'): ?>
                 <a class="nav-link <?php echo $route === 'admin/dashboard' ? 'active' : ''; ?>" href="index.php?r=admin/dashboard">
                     <i class="fas fa-chart-line"></i> Dashboard

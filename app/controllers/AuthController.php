@@ -8,6 +8,7 @@ use App\Core\Controller;
 use App\Core\Mailer;
 use App\Models\User;
 use App\Models\PasswordReset;
+use App\Models\Log;
 
 class AuthController extends Controller
 {
@@ -29,6 +30,10 @@ class AuthController extends Controller
                 } else {
                     Auth::login($user);
                     
+                    // Log Login Success
+                    $logModel = new Log();
+                    $logModel->create('login', 'Login realizado com sucesso', (int)$user['id']);
+                    
                     if (isset($user['force_password_change']) && $user['force_password_change']) {
                         $this->redirect('candidate/change-password');
                     }
@@ -43,6 +48,11 @@ class AuthController extends Controller
                 }
             } else {
                 $error = 'Credenciais inválidas';
+                // Log Login Failure (Optional: might spam DB, but requested)
+                // Need to be careful not to log passwords.
+                // Since we don't have user ID, we log null.
+                $logModel = new Log();
+                $logModel->create('login_failed', "Tentativa de login falha para identificador: " . substr($identifier, 0, 50), null);
             }
         }
 
