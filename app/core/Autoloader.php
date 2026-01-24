@@ -21,11 +21,19 @@ class Autoloader
         }
 
         $relativeClass = substr($class, $len);
-        $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
+        
+        // Ajuste para pastas minúsculas em servidor Linux
+        $parts = explode('\\', $relativeClass);
+        // Transforma pastas em minúsculas (Controllers -> controllers)
+        // Mantém o nome do arquivo original (HomeController -> HomeController)
+        for ($i = 0; $i < count($parts) - 1; $i++) {
+            $parts[$i] = strtolower($parts[$i]);
+        }
+        
+        $file = $baseDir . implode('/', $parts) . '.php';
 
         if (file_exists($file)) {
             require $file;
         }
     }
 }
-
