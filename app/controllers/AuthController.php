@@ -9,6 +9,7 @@ use App\Core\Mailer;
 use App\Models\User;
 use App\Models\PasswordReset;
 use App\Models\Log;
+use App\Models\Organization;
 
 class AuthController extends Controller
 {
@@ -56,7 +57,13 @@ class AuthController extends Controller
             }
         }
 
-        $this->render('auth/login', ['error' => $error]);
+        $organizationModel = new Organization();
+        $settings = $organizationModel->getSettings();
+
+        $this->render('auth/login', [
+            'error' => $error,
+            'settings' => $settings
+        ]);
     }
 
     public function register(): void

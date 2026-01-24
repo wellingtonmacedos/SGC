@@ -174,6 +174,9 @@ foreach ($enrollments as $enr) {
                         <a href="index.php?r=admin/enrollments&course_id=<?php echo $selectedCourseId; ?>&export=csv" class="btn btn-outline-success btn-sm fw-bold">
                             <i class="fas fa-file-excel me-1"></i> Excel
                         </a>
+                        <a href="index.php?r=admin/enrollments&course_id=<?php echo $selectedCourseId; ?>&export=doc" class="btn btn-outline-primary btn-sm fw-bold">
+                            <i class="fas fa-file-word me-1"></i> Word
+                        </a>
                         <a href="index.php?r=admin/enrollments&course_id=<?php echo $selectedCourseId; ?>&export=pdf" target="_blank" class="btn btn-outline-danger btn-sm fw-bold">
                             <i class="fas fa-file-pdf me-1"></i> PDF
                         </a>

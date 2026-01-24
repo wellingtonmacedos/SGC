@@ -236,6 +236,9 @@ function formatTimeBr(?string $value): string
                 <a class="nav-link <?php echo $route === 'superAdmin/logs' ? 'active' : ''; ?>" href="index.php?r=superAdmin/logs">
                     <i class="fas fa-history"></i> Logs
                 </a>
+                <a class="nav-link <?php echo $route === 'superAdmin/loginSettings' ? 'active' : ''; ?>" href="index.php?r=superAdmin/loginSettings">
+                    <i class="fas fa-paint-brush"></i> Personalizar Login
+                </a>
                 <a class="nav-link <?php echo $route === 'superAdmin/updates' ? 'active' : ''; ?>" href="index.php?r=superAdmin/updates">
                     <i class="fas fa-sync-alt"></i> Atualizações
                 </a>

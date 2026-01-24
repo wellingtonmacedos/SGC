@@ -9,6 +9,7 @@ use App\Models\Backup;
 use App\Models\Enrollment;
 use App\Models\Course;
 use App\Models\Log;
+use App\Models\Organization;
 use ZipArchive;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
@@ -486,6 +487,91 @@ class SuperAdminController extends Controller
         }
         
         $this->render('super_admin/updates/index', ['version' => $version]);
+    }
+
+    // --- Login Settings ---
+    public function loginSettings(): void
+    {
+        $organizationModel = new Organization();
+        $settings = $organizationModel->getSettings();
+        $error = null;
+
+        if ($this->isPost()) {
+            $data = [
+                'login_title' => $this->getPostString('login_title'),
+                'login_subtitle' => $this->getPostString('login_subtitle'),
+                'login_primary_color' => $this->getPostString('login_primary_color'),
+                'login_background_color' => $this->getPostString('login_background_color'),
+                'login_icon' => $this->getPostString('login_icon'),
+            ];
+
+            // Handle Logo Upload
+            if (isset($_FILES['login_logo']) && $_FILES['login_logo']['error'] === UPLOAD_ERR_OK) {
+                $file = $_FILES['login_logo'];
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'svg'])) {
+                    $filename = 'login_logo_' . time() . '.' . $ext;
+                    if (!is_dir(ORGANIZATION_LOGO_PATH)) {
+                        mkdir(ORGANIZATION_LOGO_PATH, 0755, true);
+                    }
+                    if (move_uploaded_file($file['tmp_name'], ORGANIZATION_LOGO_PATH . '/' . $filename)) {
+                        $data['login_logo'] = $filename;
+                        // Remove old logo if exists and different
+                        if (!empty($settings['login_logo']) && file_exists(ORGANIZATION_LOGO_PATH . '/' . $settings['login_logo'])) {
+                            unlink(ORGANIZATION_LOGO_PATH . '/' . $settings['login_logo']);
+                        }
+                    } else {
+                        $error = 'Erro ao salvar a logo.';
+                    }
+                } else {
+                    $error = 'Formato de logo inválido.';
+                }
+            }
+
+            // Handle Background Image Upload
+            if (isset($_FILES['login_background_image']) && $_FILES['login_background_image']['error'] === UPLOAD_ERR_OK) {
+                $file = $_FILES['login_background_image'];
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                    $filename = 'login_bg_' . time() . '.' . $ext;
+                    if (!is_dir(ORGANIZATION_LOGO_PATH)) {
+                        mkdir(ORGANIZATION_LOGO_PATH, 0755, true);
+                    }
+                    if (move_uploaded_file($file['tmp_name'], ORGANIZATION_LOGO_PATH . '/' . $filename)) {
+                        $data['login_background_image'] = $filename;
+                        // Remove old background if exists and different
+                        if (!empty($settings['login_background_image']) && file_exists(ORGANIZATION_LOGO_PATH . '/' . $settings['login_background_image'])) {
+                            unlink(ORGANIZATION_LOGO_PATH . '/' . $settings['login_background_image']);
+                        }
+                    } else {
+                        $error = 'Erro ao salvar a imagem de fundo.';
+                    }
+                } else {
+                    $error = 'Formato de imagem de fundo inválido.';
+                }
+            }
+
+            if (!$error) {
+                try {
+                    $organizationModel->updateLoginSettings($data);
+                    
+                    $logModel = new Log();
+                    $logModel->create('settings_update', 'Configurações de login atualizadas', (int)Auth::user()['id']);
+                    
+                    header('Location: index.php?r=superAdmin/loginSettings&success=1');
+                    exit;
+                } catch (\Exception $e) {
+                    $error = 'Erro ao salvar configurações: ' . $e->getMessage();
+                }
+            }
+            
+            // If error, refresh settings with posted data for form repopulation (simplified, just reloading from DB + posted error)
+        }
+
+        $this->render('super_admin/login_settings', [
+            'settings' => $organizationModel->getSettings(),
+            'error' => $error
+        ]);
     }
 
     // --- Private Helpers ---

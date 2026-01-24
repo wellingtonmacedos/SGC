@@ -26,11 +26,78 @@ class Organization extends Model
                 'state' => '',
                 'zip_code' => '',
                 'logo' => '',
-                'institutional_text' => ''
+                'institutional_text' => '',
+                'login_title' => 'Bem-vindo ao SGC',
+                'login_subtitle' => 'Faça login para continuar',
+                'login_primary_color' => '#0d1b2a',
+                'login_background_color' => '#0d1b2a',
+                'login_background_image' => '',
+                'login_icon' => 'fas fa-graduation-cap',
+                'login_logo' => ''
             ];
         }
         
         return $settings;
+    }
+
+    public function updateLoginSettings(array $data): void
+    {
+        $current = $this->getSettings();
+        $id = $current['id'] ?? 0;
+
+        if ($id > 0) {
+            $sql = "UPDATE organization_settings SET 
+                    login_title = :login_title,
+                    login_subtitle = :login_subtitle,
+                    login_primary_color = :login_primary_color,
+                    login_background_color = :login_background_color,
+                    login_icon = :login_icon";
+            
+            $params = [
+                'login_title' => $data['login_title'],
+                'login_subtitle' => $data['login_subtitle'],
+                'login_primary_color' => $data['login_primary_color'],
+                'login_background_color' => $data['login_background_color'],
+                'login_icon' => $data['login_icon'],
+                'id' => $id
+            ];
+
+            if (isset($data['login_background_image'])) {
+                $sql .= ", login_background_image = :login_background_image";
+                $params['login_background_image'] = $data['login_background_image'];
+            }
+            
+            if (isset($data['login_logo'])) {
+                $sql .= ", login_logo = :login_logo";
+                $params['login_logo'] = $data['login_logo'];
+            }
+
+            $sql .= " WHERE id = :id";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+        } else {
+             // Create initial record if it doesn't exist (though it should usually exist)
+             // For brevity, assuming it exists or handled by updateSettings first. 
+             // But to be safe, let's just insert with defaults + these values.
+             // Actually, the main updateSettings handles insert. Let's assume organization settings are initialized.
+             // If not, we can do a partial insert.
+             $sql = "INSERT INTO organization_settings (
+                login_title, login_subtitle, login_primary_color, login_background_color, login_icon, login_background_image, login_logo
+             ) VALUES (
+                :login_title, :login_subtitle, :login_primary_color, :login_background_color, :login_icon, :login_background_image, :login_logo
+             )";
+             $stmt = $this->db->prepare($sql);
+             $stmt->execute([
+                'login_title' => $data['login_title'],
+                'login_subtitle' => $data['login_subtitle'],
+                'login_primary_color' => $data['login_primary_color'],
+                'login_background_color' => $data['login_background_color'],
+                'login_icon' => $data['login_icon'],
+                'login_background_image' => $data['login_background_image'] ?? null,
+                'login_logo' => $data['login_logo'] ?? null
+             ]);
+        }
     }
 
     public function updateSettings(array $data): void

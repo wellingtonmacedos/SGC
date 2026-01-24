@@ -1,13 +1,25 @@
-<?php ?>
+<?php
+// Default values if settings not set
+$bgImage = !empty($settings['login_background_image']) 
+    ? 'storage/organization/' . $settings['login_background_image'] 
+    : 'assets/img/login_bg.jpg';
+
+$bgColor = $settings['login_background_color'] ?? '#0d1b2a';
+$primaryColor = $settings['login_primary_color'] ?? '#0d1b2a';
+$title = $settings['login_title'] ?? 'Bem-vindo ao SGC';
+$subtitle = $settings['login_subtitle'] ?? 'Faça login para continuar';
+$iconClass = $settings['login_icon'] ?? 'fas fa-graduation-cap';
+$logo = $settings['login_logo'] ?? null;
+?>
 <style>
     body {
         /* Fallback color */
-        background-color: #0d1b2a;
+        background-color: <?php echo $bgColor; ?>;
         /* Background Image */
-        background: url('assets/img/login_bg.jpg') no-repeat center center fixed;
+        background: url('<?php echo $bgImage; ?>') no-repeat center center fixed;
         background-size: cover;
     }
-    /* Overlay to darken background slightly if needed, but the image looks dark blue already */
+    /* Overlay to darken background slightly if needed */
     
     .login-container {
         min-height: 80vh;
@@ -34,16 +46,19 @@
     }
     .input-group:focus-within .input-group-text,
     .input-group:focus-within .form-control {
-        border-color: #0d1b2a;
+        border-color: <?php echo $primaryColor; ?>;
     }
     .btn-login {
-        background-color: #0d1b2a;
-        border-color: #0d1b2a;
+        background-color: <?php echo $primaryColor; ?>;
+        border-color: <?php echo $primaryColor; ?>;
         transition: all 0.3s;
     }
     .btn-login:hover {
-        background-color: #1b263b;
+        opacity: 0.9;
         transform: translateY(-2px);
+    }
+    .text-primary-custom {
+        color: <?php echo $primaryColor; ?> !important;
     }
 </style>
 
@@ -51,11 +66,15 @@
     <div class="col-12 col-md-6 col-lg-4">
         <div class="card card-login border-0 p-4 p-md-5">
             <div class="text-center mb-4">
-                <div class="mb-3 text-primary">
-                    <i class="fas fa-graduation-cap fa-3x"></i>
+                <div class="mb-3 text-primary-custom">
+                    <?php if (!empty($logo)): ?>
+                        <img src="storage/organization/<?php echo e($logo); ?>" alt="Logo" style="max-height: 80px; max-width: 100%;">
+                    <?php else: ?>
+                        <i class="<?php echo e($iconClass); ?> fa-3x"></i>
+                    <?php endif; ?>
                 </div>
-                <h1 class="h4 fw-bold text-dark mb-1">Bem-vindo ao SGC</h1>
-                <p class="text-muted small">Faça login para continuar</p>
+                <h1 class="h4 fw-bold text-dark mb-1"><?php echo e($title); ?></h1>
+                <p class="text-muted small"><?php echo e($subtitle); ?></p>
             </div>
             
             <?php if (!empty($error)): ?>

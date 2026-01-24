@@ -580,6 +580,74 @@ class AdminController extends Controller
                     }
                     fclose($output);
                     exit;
+                } elseif ($_GET['export'] === 'doc') {
+                    header('Content-Type: application/vnd.ms-word');
+                    header('Content-Disposition: attachment; filename="inscritos_curso_' . $selectedCourseId . '.doc"');
+                    header('Cache-Control: private, max-age=0, must-revalidate');
+                    
+                    echo "<html>";
+                    echo "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">";
+                    echo "<body>";
+                    
+                    // Header
+                    echo "<div style='text-align: center; margin-bottom: 20px;'>";
+                    if (!empty($orgSettings['logo'])) {
+                         // Note: Images in Word via HTML need absolute URLs or base64. 
+                         // For simplicity in this context, we'll just use the text header or try absolute URL if host is known.
+                         // But usually text is safer for simple export.
+                    }
+                    if (!empty($orgSettings['organization_name'])) {
+                        echo "<h2>" . htmlspecialchars($orgSettings['organization_name']) . "</h2>";
+                    }
+                    echo "<p>";
+                    $details = [];
+                    if (!empty($orgSettings['address'])) $details[] = $orgSettings['address'];
+                    if (!empty($orgSettings['city']) && !empty($orgSettings['state'])) $details[] = $orgSettings['city'] . ' - ' . $orgSettings['state'];
+                    echo implode(' | ', $details) . "<br>";
+                    
+                    $details2 = [];
+                    if (!empty($orgSettings['phone'])) $details2[] = 'Tel: ' . $orgSettings['phone'];
+                    if (!empty($orgSettings['email'])) $details2[] = 'E-mail: ' . $orgSettings['email'];
+                    if (!empty($orgSettings['cnpj'])) $details2[] = 'CNPJ: ' . $orgSettings['cnpj'];
+                    echo implode(' | ', $details2);
+                    echo "</p>";
+                    echo "</div>";
+
+                    echo "<hr>";
+
+                    // Course Info
+                    echo "<h3>Relatório de Inscritos</h3>";
+                    echo "<p><strong>Curso:</strong> " . htmlspecialchars($course['name']) . "</p>";
+                    echo "<p><strong>Instrutor:</strong> " . htmlspecialchars($course['instructor']) . " | <strong>Período:</strong> " . htmlspecialchars($course['period']) . "</p>";
+
+                    // Table
+                    echo "<table border='1' cellpadding='5' cellspacing='0' style='width: 100%; border-collapse: collapse;'>";
+                    echo "<tr style='background-color: #f2f2f2;'>";
+                    echo "<th>Nome</th><th>Email</th><th>CPF</th><th>Status</th>";
+                    echo "</tr>";
+
+                    foreach ($enrollments as $row) {
+                        $status = match($row['status']) {
+                            'certificate_available' => 'Certificado disponível',
+                            'completed' => 'Concluído',
+                            default => 'Inscrito'
+                        };
+                        echo "<tr>";
+                        echo "<td>" . htmlspecialchars($row['user_name']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['email']) . "</td>";
+                        echo "<td>" . htmlspecialchars($row['cpf'] ?? '') . "</td>";
+                        echo "<td>" . htmlspecialchars($status) . "</td>";
+                        echo "</tr>";
+                    }
+                    echo "</table>";
+
+                    echo "<div style='margin-top: 30px; text-align: right; font-size: 10px; color: #666;'>";
+                    echo "Gerado em: " . date('d/m/Y H:i');
+                    echo "</div>";
+
+                    echo "</body>";
+                    echo "</html>";
+                    exit;
                 } elseif ($_GET['export'] === 'pdf') {
                     $this->render('admin/enrollments_pdf', [
                         'course' => $course,
