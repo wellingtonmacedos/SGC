@@ -50,7 +50,7 @@ class Enrollment extends Model
 
     public function listByUser(int $userId): array
     {
-        $stmt = $this->db->prepare('SELECT e.id, e.status, e.course_id, c.name AS course_name, c.workload, c.instructor FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE e.user_id = :user_id ORDER BY c.name');
+        $stmt = $this->db->prepare('SELECT e.id, e.status, e.course_id, e.created_at, c.name AS course_name, c.workload, c.instructor, c.location AS course_location FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE e.user_id = :user_id ORDER BY c.name');
         $stmt->execute(['user_id' => $userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -77,6 +77,12 @@ class Enrollment extends Model
             'id' => $enrollmentId,
             'status' => $status,
         ]);
+    }
+
+    public function delete(int $id): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM enrollments WHERE id = :id');
+        $stmt->execute(['id' => $id]);
     }
 
     public function find(int $id): ?array

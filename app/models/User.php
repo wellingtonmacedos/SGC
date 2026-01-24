@@ -168,6 +168,12 @@ class User extends Model
         $stmt->execute(['id' => $id]);
     }
 
+    public function deleteCandidate(int $id): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM users WHERE id = :id AND role = "candidate"');
+        $stmt->execute(['id' => $id]);
+    }
+
 
     public function updatePassword(int $id, string $passwordHash, bool $forceChange = false): void
     {

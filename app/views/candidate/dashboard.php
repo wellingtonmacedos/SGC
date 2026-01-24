@@ -14,6 +14,19 @@ foreach ($enrollments as $enr) {
 ?>
 
 <!-- Stats Cards -->
+<?php if (isset($_GET['success'])): ?>
+    <div class="alert alert-success shadow-sm border-0 border-start border-4 border-success fade show mb-4" role="alert">
+        <i class="fas fa-check-circle me-2"></i> <?php echo e($_GET['success']); ?>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($_GET['error']) || !empty($error)): ?>
+    <div class="alert alert-danger shadow-sm border-0 border-start border-4 border-danger fade show mb-4" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i> 
+        <?php echo isset($_GET['error']) ? e($_GET['error']) : e($error); ?>
+    </div>
+<?php endif; ?>
+
 <div class="row g-4 mb-5">
     <div class="col-md-4">
         <div class="stat-card stat-card-blue d-flex align-items-center justify-content-between">
@@ -43,115 +56,6 @@ foreach ($enrollments as $enr) {
         </div>
     </div>
 </div>
-
-<!-- My Enrollments -->
-<?php if (!empty($enrollments)): ?>
-    <div class="card border-0 shadow-sm mb-5" id="enrollments">
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-list me-2"></i>Minhas Inscrições</h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="ps-4">Curso</th>
-                            <th>Data Inscrição</th>
-                            <th>Status</th>
-                            <th class="text-end pe-4">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($enrollments as $enrollment): ?>
-                            <tr>
-                                <td class="ps-4">
-                                    <div class="fw-bold"><?php echo e($enrollment['course_name']); ?></div>
-                                    <div class="small text-muted"><?php echo e($enrollment['course_location'] ?? ''); ?></div>
-                                </td>
-                                <td><?php echo formatDateBr($enrollment['created_at']); ?></td>
-                                <td>
-                                    <?php
-                                    $statusClass = 'bg-secondary';
-                                    $statusLabel = $enrollment['status'];
-                                    
-                                    switch ($enrollment['status']) {
-                                        case 'pending':
-                                            $statusClass = 'bg-warning text-dark';
-                                            $statusLabel = 'Pendente';
-                                            break;
-                                        case 'confirmed':
-                                            $statusClass = 'bg-primary';
-                                            $statusLabel = 'Confirmado';
-                                            break;
-                                        case 'completed':
-                                            $statusClass = 'bg-success';
-                                            $statusLabel = 'Concluído';
-                                            break;
-                                        case 'cancelled':
-                                            $statusClass = 'bg-danger';
-                                            $statusLabel = 'Cancelado';
-                                            break;
-                                        case 'certificate_available':
-                                            $statusClass = 'bg-success';
-                                            $statusLabel = 'Certificado Disponível';
-                                            break;
-                                    }
-                                    ?>
-                                    <span class="badge <?php echo $statusClass; ?> rounded-pill">
-                                        <?php echo e($statusLabel); ?>
-                                    </span>
-                                </td>
-                                <td class="text-end pe-4">
-                                    <a href="index.php?r=candidate/courseDetails&id=<?php echo $enrollment['course_id']; ?>" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-eye"></i> Detalhes
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-<?php endif; ?>
-
-<!-- My Certificates -->
-<?php if (!empty($certificates)): ?>
-    <div class="card border-0 shadow-sm mb-5" id="certificates">
-        <div class="card-header bg-white py-3">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-certificate me-2"></i>Meus Certificados</h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="ps-4">Curso</th>
-                            <th>Data Emissão</th>
-                            <th class="text-end pe-4">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($certificates as $cert): ?>
-                            <tr>
-                                <td class="ps-4">
-                                    <div class="fw-bold"><?php echo e($cert['course_name'] ?? 'Curso não identificado'); ?></div>
-                                    <div class="small text-muted">Código: <?php echo e($cert['validation_code']); ?></div>
-                                </td>
-                                <td><?php echo formatDateBr($cert['issued_at']); ?></td>
-                                <td class="text-end pe-4">
-                                    <a href="index.php?r=candidate/downloadCertificate&id=<?php echo $cert['id']; ?>" class="btn btn-sm btn-success" target="_blank">
-                                        <i class="fas fa-download me-1"></i> Baixar
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-<?php endif; ?>
 
 <!-- Available Courses Section -->
 <div class="mb-5">
@@ -220,11 +124,15 @@ foreach ($enrollments as $enr) {
                             <div class="mt-auto">
                                 <?php 
                                     $maxEnrollments = (int)($course['max_enrollments'] ?? 0);
-                                    // Use a safer check for remaining spots if available in the array, otherwise rely on controller logic
-                                    // For visual feedback only (controller does the real check)
+                                    $currentCount = (int)($course['enrollments_count'] ?? 0);
+                                    $isFull = $maxEnrollments > 0 && $currentCount >= $maxEnrollments;
                                 ?>
                                 
-                                <?php if ($maxEnrollments > 0): ?>
+                                <?php if ($isFull): ?>
+                                    <div class="mb-3">
+                                        <span class="badge bg-danger text-white border"><i class="fas fa-ban me-1"></i> Vagas Esgotadas</span>
+                                    </div>
+                                <?php elseif ($maxEnrollments > 0): ?>
                                     <div class="mb-3">
                                         <span class="badge bg-light text-dark border"><i class="fas fa-users me-1"></i> Vagas Limitadas</span>
                                     </div>
@@ -238,12 +146,26 @@ foreach ($enrollments as $enr) {
                                     <a href="index.php?r=candidate/courseDetails&id=<?php echo $course['id']; ?>" class="btn btn-outline-primary fw-bold py-2 shadow-sm btn-hover-effect">
                                         <i class="fas fa-info-circle me-2"></i> Ver Detalhes
                                     </a>
-                                    <form method="post" action="index.php?r=candidate/dashboard" class="d-grid">
-                                        <input type="hidden" name="course_id" value="<?php echo $course['id']; ?>">
-                                        <button type="submit" class="btn btn-primary fw-bold py-2 shadow-sm btn-hover-effect">
-                                            <i class="fas fa-check-circle me-2"></i> Inscrever-se
-                                        </button>
-                                    </form>
+                                    <?php if (in_array($course['id'], $enrolledCourseIds ?? [])): ?>
+                                        <div class="d-grid">
+                                            <button type="button" class="btn btn-success fw-bold py-2 shadow-sm" disabled>
+                                                <i class="fas fa-check me-2"></i> Já Inscrito
+                                            </button>
+                                        </div>
+                                    <?php elseif ($isFull): ?>
+                                        <div class="d-grid">
+                                            <button type="button" class="btn btn-secondary fw-bold py-2 shadow-sm" disabled>
+                                                <i class="fas fa-ban me-2"></i> Esgotado
+                                            </button>
+                                        </div>
+                                    <?php else: ?>
+                                        <form method="post" action="index.php?r=candidate/dashboard" class="d-grid">
+                                            <input type="hidden" name="course_id" value="<?php echo $course['id']; ?>">
+                                            <button type="submit" class="btn btn-primary fw-bold py-2 shadow-sm btn-hover-effect">
+                                                <i class="fas fa-check-circle me-2"></i> Inscrever-se
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>

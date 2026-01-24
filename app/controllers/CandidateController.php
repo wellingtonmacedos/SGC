@@ -137,7 +137,6 @@ class CandidateController extends Controller
         
         $courseModel = new Course();
         $enrollmentModel = new Enrollment();
-        $certificateModel = new Certificate();
 
         $filterDate = isset($_GET['date']) ? trim((string)$_GET['date']) : '';
         $filterSearch = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
@@ -145,34 +144,38 @@ class CandidateController extends Controller
 
         if ($this->isPost() && isset($_POST['course_id'])) {
             $courseId = $this->getPostInt('course_id');
-            if ($courseId > 0 && !$enrollmentModel->exists($user['id'], $courseId)) {
-                $course = $courseModel->find($courseId);
-                
-                if ($course) {
-                    $maxEnrollments = (int)($course['max_enrollments'] ?? 0);
-                    // Check actual count from db to be safe
-                    $currentCount = $enrollmentModel->countByCourse($courseId);
+            if ($courseId > 0) {
+                if ($enrollmentModel->exists($user['id'], $courseId)) {
+                    $error = 'Você já está inscrito neste curso.';
+                } else {
+                    $course = $courseModel->find($courseId);
                     
-                    if ($maxEnrollments > 0 && $currentCount >= $maxEnrollments) {
-                        $error = 'As inscrições para este curso estão encerradas.';
-                    } else {
-                        $enrollmentModel->create($user['id'], $courseId);
-
-                        // Send emails
-                        $subject = 'Confirmação de Inscrição: ' . $course['name'];
-                        $message = "Olá " . htmlspecialchars($user['name']) . ",\n\n";
-                        $message .= "Sua inscrição no curso \"" . htmlspecialchars($course['name']) . "\" foi realizada com sucesso.\n";
-                        $message .= "Bons estudos!";
+                    if ($course) {
+                        $maxEnrollments = (int)($course['max_enrollments'] ?? 0);
+                        // Check actual count from db to be safe
+                        $currentCount = $enrollmentModel->countByCourse($courseId);
                         
-                        Mailer::send($user['email'], $subject, $message);
-                        
-                        // Notify Admin
-                        $adminSubject = 'Nova Inscrição: ' . $course['name'];
-                        $adminMessage = "O candidato " . htmlspecialchars($user['name']) . " (" . $user['email'] . ") se inscreveu no curso \"" . htmlspecialchars($course['name']) . "\".";
-                        Mailer::send(MAIL_ADMIN_ADDRESS, $adminSubject, $adminMessage);
+                        if ($maxEnrollments > 0 && $currentCount >= $maxEnrollments) {
+                            $error = 'As inscrições para este curso estão encerradas.';
+                        } else {
+                            $enrollmentModel->create($user['id'], $courseId);
 
-                        // Redirect to avoid form resubmission and show success
-                        $this->redirect('candidate/dashboard&section=enrollments#enrollments');
+                            // Send emails
+                            $subject = 'Confirmação de Inscrição: ' . $course['name'];
+                            $message = "Olá " . htmlspecialchars($user['name']) . ",\n\n";
+                            $message .= "Sua inscrição no curso \"" . htmlspecialchars($course['name']) . "\" foi realizada com sucesso.\n";
+                            $message .= "Bons estudos!";
+                            
+                            Mailer::send($user['email'], $subject, $message);
+                            
+                            // Notify Admin
+                            $adminSubject = 'Nova Inscrição: ' . $course['name'];
+                            $adminMessage = "O candidato " . htmlspecialchars($user['name']) . " (" . $user['email'] . ") se inscreveu no curso \"" . htmlspecialchars($course['name']) . "\".";
+                            Mailer::send(MAIL_ADMIN_ADDRESS, $adminSubject, $adminMessage);
+
+                            // Redirect to avoid form resubmission and show success
+                            $this->redirect('candidate/dashboard&success=' . urlencode('Inscrição realizada com sucesso! Você pode visualizar seus cursos no menu "Minhas Inscrições".'));
+                        }
                     }
                 }
             }
@@ -190,13 +193,13 @@ class CandidateController extends Controller
         $availableCourses = $courseModel->paginateAvailable($page, $perPage, $filters);
         
         $enrollments = $enrollmentModel->listByUser($user['id']);
-        $certificates = $certificateModel->listByUser($user['id']);
+        $enrolledCourseIds = array_column($enrollments, 'course_id');
 
         $this->render('candidate/dashboard', [
             'user' => $user,
             'availableCourses' => $availableCourses,
             'enrollments' => $enrollments,
-            'certificates' => $certificates,
+            'enrolledCourseIds' => $enrolledCourseIds,
             'filterDate' => $filterDate,
             'filterSearch' => $filterSearch,
             'error' => $error,
@@ -253,6 +256,23 @@ class CandidateController extends Controller
 
         $enrollmentModel = new Enrollment();
         $certificateModel = new Certificate();
+
+        // Handle cancellation
+        if ($this->isPost() && isset($_POST['action']) && $_POST['action'] === 'cancel') {
+            $enrollmentId = $this->getPostInt('enrollment_id');
+            $enrollment = $enrollmentModel->find($enrollmentId);
+
+            if ($enrollment && (int)$enrollment['user_id'] === (int)$user['id']) {
+                if ($enrollment['status'] !== 'certificate_available' && $enrollment['status'] !== 'completed') {
+                    $enrollmentModel->delete($enrollmentId);
+                    $this->redirect('candidate/enrollments&success=Inscrição cancelada com sucesso.');
+                } else {
+                    $this->redirect('candidate/enrollments&error=Não é possível cancelar uma inscrição concluída ou com certificado.');
+                }
+            } else {
+                $this->redirect('candidate/enrollments&error=Inscrição não encontrada.');
+            }
+        }
 
         $enrollments = $enrollmentModel->listByUser($user['id']);
         $certificates = $certificateModel->listByUser($user['id']);

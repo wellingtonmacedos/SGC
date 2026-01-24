@@ -23,7 +23,7 @@ class Certificate extends Model
 
     public function listByUser(int $userId): array
     {
-        $stmt = $this->db->prepare('SELECT cert.id, cert.original_name, cert.file_name, cert.mime_type, cert.created_at, c.name AS course_name, c.id AS course_id FROM certificates cert JOIN enrollments e ON e.id = cert.enrollment_id JOIN courses c ON c.id = e.course_id WHERE e.user_id = :user_id ORDER BY cert.created_at DESC');
+        $stmt = $this->db->prepare('SELECT cert.id, cert.original_name, cert.file_name, cert.mime_type, cert.created_at, cert.validation_code, cert.issued_at, c.name AS course_name, c.id AS course_id FROM certificates cert JOIN enrollments e ON e.id = cert.enrollment_id JOIN courses c ON c.id = e.course_id WHERE e.user_id = :user_id ORDER BY cert.created_at DESC');
         $stmt->execute(['user_id' => $userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

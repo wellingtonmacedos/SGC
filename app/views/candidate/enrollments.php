@@ -4,6 +4,18 @@
     </div>
 </div>
 
+<?php if (isset($_GET['success'])): ?>
+    <div class="alert alert-success shadow-sm border-0 border-start border-4 border-success fade show mb-4" role="alert">
+        <i class="fas fa-check-circle me-2"></i> <?php echo e($_GET['success']); ?>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($_GET['error'])): ?>
+    <div class="alert alert-danger shadow-sm border-0 border-start border-4 border-danger fade show mb-4" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i> <?php echo e($_GET['error']); ?>
+    </div>
+<?php endif; ?>
+
 <?php if (empty($enrollments)): ?>
     <div class="alert alert-info py-4 text-center">
         <i class="fas fa-info-circle fa-2x mb-3 d-block"></i>
@@ -54,6 +66,16 @@
                                     <a href="index.php?r=candidate/courseDetails&id=<?php echo $enrollment['course_id']; ?>" class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-eye me-1"></i> Detalhes
                                     </a>
+                                    
+                                    <?php if ($status !== 'certificate_available' && $status !== 'completed'): ?>
+                                        <form method="post" action="index.php?r=candidate/enrollments" class="d-inline" onsubmit="return confirm('Tem certeza que deseja cancelar sua inscrição neste curso? Esta ação não pode ser desfeita.');">
+                                            <input type="hidden" name="action" value="cancel">
+                                            <input type="hidden" name="enrollment_id" value="<?php echo $enrollment['id']; ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancelar Inscrição">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
                                     
                                     <?php if ($status === 'certificate_available'): ?>
                                         <?php 

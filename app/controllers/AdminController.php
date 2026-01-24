@@ -193,10 +193,128 @@ class AdminController extends Controller
         $userModel = new User();
         $enrollmentModel = new Enrollment();
 
+        if (isset($_GET['delete'])) {
+            $id = (int)$_GET['delete'];
+            if ($id > 0) {
+                $candidate = $userModel->findById($id);
+                if ($candidate && $candidate['role'] === 'candidate') {
+                    $userModel->deleteCandidate($id);
+                    
+                    if (!empty($candidate['photo']) && file_exists(CANDIDATE_PHOTO_PATH . '/' . $candidate['photo'])) {
+                        unlink(CANDIDATE_PHOTO_PATH . '/' . $candidate['photo']);
+                    }
+
+                    $logModel = new Log();
+                    $logModel->create('candidate_deleted', "Candidato removido: {$candidate['name']} (ID: $id)", (int)Auth::user()['id']);
+                    
+                    $this->redirect('admin/candidates&success=Candidato removido com sucesso');
+                    return;
+                }
+            }
+            $this->redirect('admin/candidates');
+            return;
+        }
+
         $candidates = $userModel->listCandidates();
+        $success = isset($_GET['success']) ? $_GET['success'] : '';
 
         $this->render('admin/candidates', [
             'candidates' => $candidates,
+            'success' => $success
+        ]);
+    }
+
+    public function createCandidate(): void
+    {
+        Auth::requireAdmin();
+        $userModel = new User();
+        $error = '';
+
+        if ($this->isPost()) {
+            $name = $this->getPostString('name');
+            $username = $this->getPostString('username');
+            $cpf = preg_replace('/[^0-9]/', '', $this->getPostString('cpf'));
+            $email = $this->getPostString('email');
+            $password = $this->getPostString('password');
+            $confirmPassword = $this->getPostString('confirm_password');
+            $phone = $this->getPostString('phone');
+            $address = $this->getPostString('address');
+
+            if (!$name || !$username || !$cpf || !$email || !$password || !$address) {
+                $error = 'Preencha todos os campos obrigatórios';
+            } elseif (strlen($name) < 3 || preg_match('/\d/', $name)) {
+                $error = 'Nome inválido (mínimo 3 caracteres, sem números)';
+            } elseif (preg_match('/\s/', $username)) {
+                $error = 'O nome de usuário não pode conter espaços';
+            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $error = 'E-mail inválido';
+            } elseif (!$this->validateCpf($cpf)) {
+                $error = 'CPF inválido';
+            } elseif ($password !== $confirmPassword) {
+                $error = 'As senhas não conferem';
+            } elseif (strlen($password) < 6) {
+                $error = 'A senha deve ter no mínimo 6 caracteres';
+            } else {
+                $checkEmail = $userModel->findByEmail($email);
+                if ($checkEmail) {
+                    $error = 'E-mail já está em uso';
+                }
+
+                $checkCpf = $userModel->findByCpf($cpf);
+                if ($checkCpf) {
+                    $error = 'CPF já está em uso';
+                }
+
+                $checkUsername = $userModel->findByUsername($username);
+                if ($checkUsername) {
+                    $error = 'Nome de usuário já está em uso';
+                }
+
+                if (!$error) {
+                    $photoPath = null;
+                    if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+                        $file = $_FILES['photo'];
+                        if ($file['size'] > CANDIDATE_PHOTO_MAX_SIZE) {
+                            $error = 'A foto excede o tamanho máximo permitido (2MB)';
+                        } else {
+                            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                            $mimeType = $finfo->file($file['tmp_name']);
+                            $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png'];
+                            
+                            if (!isset($allowed[$mimeType])) {
+                                $error = 'Apenas imagens JPG ou PNG são permitidas';
+                            } else {
+                                if (!is_dir(CANDIDATE_PHOTO_PATH)) {
+                                    mkdir(CANDIDATE_PHOTO_PATH, 0775, true);
+                                }
+                                $ext = $allowed[$mimeType];
+                                $fileName = sha1(uniqid((string)time(), true)) . '.' . $ext;
+                                $target = CANDIDATE_PHOTO_PATH . '/' . $fileName;
+                                
+                                if (move_uploaded_file($file['tmp_name'], $target)) {
+                                    $photoPath = $fileName;
+                                } else {
+                                    $error = 'Falha ao salvar a foto';
+                                }
+                            }
+                        }
+                    }
+
+                    if (!$error) {
+                        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+                        $id = $userModel->createCandidate($name, $cpf, $email, $passwordHash, $username, $phone, $address, $photoPath);
+                        
+                        $logModel = new Log();
+                        $logModel->create('candidate_created_by_admin', "Novo candidato criado: $name (ID: $id)", (int)Auth::user()['id']);
+                        
+                        $this->redirect('admin/candidates&success=Candidato criado com sucesso');
+                    }
+                }
+            }
+        }
+
+        $this->render('admin/candidate_create', [
+            'error' => $error
         ]);
     }
 
@@ -351,8 +469,61 @@ class AdminController extends Controller
         Auth::requireAdmin();
         $courseModel = new Course();
         $enrollmentModel = new Enrollment();
+        $userModel = new User();
+
+        // Handle Delete Enrollment
+        if (isset($_GET['delete'])) {
+            $deleteId = (int)$_GET['delete'];
+            $courseId = isset($_GET['course_id']) ? (int)$_GET['course_id'] : 0;
+            
+            if ($deleteId > 0) {
+                $enrollment = $enrollmentModel->find($deleteId);
+                if ($enrollment) {
+                    // Log action
+                    $user = $userModel->findById($enrollment['user_id']);
+                    $course = $courseModel->findById($enrollment['course_id']);
+                    $logModel = new Log();
+                    $logModel->create('enrollment_deleted_by_admin', "Inscrição cancelada: {$user['name']} em {$course['name']}", (int)Auth::user()['id']);
+
+                    $enrollmentModel->delete($deleteId);
+                    $redirectUrl = 'admin/enrollments';
+                    if ($courseId > 0) {
+                        $redirectUrl .= '&course_id=' . $courseId;
+                    }
+                    $this->redirect($redirectUrl . '&success=Inscrição cancelada com sucesso');
+                }
+            }
+        }
+
+        // Handle Manual Enrollment
+        if ($this->isPost() && isset($_GET['action']) && $_GET['action'] === 'create') {
+            $userId = $this->getPostInt('user_id');
+            $courseId = $this->getPostInt('course_id');
+
+            if ($userId > 0 && $courseId > 0) {
+                // Check if already enrolled
+                if ($enrollmentModel->exists($userId, $courseId)) {
+                    // Already enrolled, maybe redirect with message
+                    $this->redirect('admin/enrollments&course_id=' . $courseId . '&error=Candidato já inscrito neste curso');
+                } else {
+                    $enrollmentModel->create($userId, $courseId);
+                    
+                    $course = $courseModel->findById($courseId);
+                    $user = $userModel->findById($userId);
+                    
+                    $logModel = new Log();
+                    $logModel->create('enrollment_created_by_admin', "Inscrição manual: {$user['name']} em {$course['name']}", (int)Auth::user()['id']);
+
+                    $this->redirect('admin/enrollments&course_id=' . $courseId . '&success=Inscrição realizada com sucesso');
+                }
+            } else {
+                 $this->redirect('admin/enrollments&error=Dados inválidos');
+            }
+            return;
+        }
 
         $courses = $courseModel->all();
+        $candidates = $userModel->listCandidates(); // For the modal
         $selectedCourseId = isset($_GET['course_id']) ? (int)$_GET['course_id'] : 0;
         $enrollments = [];
 
@@ -424,6 +595,7 @@ class AdminController extends Controller
             'courses' => $courses,
             'selectedCourseId' => $selectedCourseId,
             'enrollments' => $enrollments,
+            'candidates' => $candidates
         ]);
     }
 
@@ -437,6 +609,26 @@ class AdminController extends Controller
 
         $courses = $courseModel->all();
         $candidates = $userModel->listCandidates();
+
+        // AJAX request for courses by user
+        if (isset($_GET['ajax']) && $_GET['ajax'] === 'courses' && isset($_GET['user_id'])) {
+            $userId = (int)$_GET['user_id'];
+            if ($userId > 0) {
+                $enrolledCourses = $enrollmentModel->listByUser($userId);
+                $result = array_map(function($item) {
+                    return [
+                        'id' => $item['course_id'],
+                        'name' => $item['course_name']
+                    ];
+                }, $enrolledCourses);
+                
+                header('Content-Type: application/json');
+                echo json_encode($result);
+                exit;
+            }
+            echo json_encode([]);
+            exit;
+        }
 
         $error = '';
         $success = '';

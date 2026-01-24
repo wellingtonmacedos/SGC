@@ -208,13 +208,13 @@ function formatTimeBr(?string $value): string
             ?>
             
             <?php if ($user['role'] === 'candidate'): ?>
-                <a class="nav-link <?php echo $route === 'candidate/dashboard' && $section !== 'enrollments' && $section !== 'certificates' ? 'active' : ''; ?>" href="index.php?r=candidate/dashboard">
+                <a class="nav-link <?php echo $route === 'candidate/dashboard' ? 'active' : ''; ?>" href="index.php?r=candidate/dashboard">
                     <i class="fas fa-desktop"></i> Painel
                 </a>
-                <a class="nav-link <?php echo $route === 'candidate/dashboard' && $section === 'enrollments' ? 'active' : ''; ?>" href="index.php?r=candidate/dashboard&section=enrollments#enrollments">
+                <a class="nav-link <?php echo $route === 'candidate/enrollments' ? 'active' : ''; ?>" href="index.php?r=candidate/enrollments">
                     <i class="fas fa-list"></i> Minhas Inscrições
                 </a>
-                <a class="nav-link <?php echo $route === 'candidate/dashboard' && $section === 'certificates' ? 'active' : ''; ?>" href="index.php?r=candidate/dashboard&section=certificates#certificates">
+                <a class="nav-link <?php echo $route === 'candidate/certificates' ? 'active' : ''; ?>" href="index.php?r=candidate/certificates">
                     <i class="fas fa-certificate"></i> Meus Certificados
                 </a>
                 <a class="nav-link <?php echo $route === 'candidate/profile' ? 'active' : ''; ?>" href="index.php?r=candidate/profile">
