@@ -12,7 +12,10 @@ class Mailer
         $headers[] = 'Content-type: text/html; charset=utf-8';
         $from = MAIL_FROM_NAME . ' <' . MAIL_FROM_ADDRESS . '>';
         $headers[] = 'From: ' . $from;
-        $headers[] = 'Reply-To: ' . $from;
+        
+        // Use Admin Address as Reply-To if defined, otherwise fallback to From
+        $replyTo = defined('MAIL_ADMIN_ADDRESS') && MAIL_ADMIN_ADDRESS ? MAIL_ADMIN_ADDRESS : MAIL_FROM_ADDRESS;
+        $headers[] = 'Reply-To: ' . $replyTo;
 
         $headersString = implode("\r\n", $headers);
 

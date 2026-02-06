@@ -35,9 +35,12 @@ define('APP_URL', 'https://inscricoes-camara.cristinapolis.se.leg.br');
 
 // Configurações de Email
 // O sistema usa a função mail() do PHP. Certifique-se de que a hospedagem permite envio.
+// MAIL_FROM_ADDRESS: Deve ser um e-mail do domínio da hospedagem para evitar SPAM (ex: no-reply@seudominio.com.br)
 define('MAIL_FROM_ADDRESS', 'no-reply@cristinapolis.se.leg.br');
 define('MAIL_FROM_NAME', 'SGC - Câmara Municipal');
-define('MAIL_ADMIN_ADDRESS', 'admin@cristinapolis.se.leg.br');
+
+// MAIL_ADMIN_ADDRESS: E-mail que receberá as respostas (pode ser Gmail, Outlook, etc)
+define('MAIL_ADMIN_ADDRESS', 'seu_email@gmail.com');
 ```
 
 ## 5. Permissões
@@ -56,3 +59,13 @@ Após a instalação, acesse o sistema pelo navegador.
 - **Senha:** `123456`
 
 > **Importante:** Após o primeiro login, altere sua senha imediatamente e configure os dados da instituição no painel.
+
+## 7. Como Atualizar (Deploy de novas versões)
+Caso você precise enviar atualizações para o servidor (ex: correções de bugs, novos arquivos), siga estes passos para não perder seus dados:
+
+1. **Faça backup** do arquivo `config.php` e da pasta `storage/` que estão no servidor (apenas por segurança).
+2. **Não substitua** o arquivo `config.php` do servidor pelo do seu computador (a menos que você tenha editado ele manualmente).
+3. **Não substitua** a pasta `storage/` do servidor (pois ela contém as fotos e certificados enviados pelos usuários).
+4. Substitua **todos os outros arquivos e pastas** (como `app/`, `public/`, `index.php`, etc).
+5. Se houver alterações no banco de dados, verifique se há instruções específicas ou scripts de migração.
+

@@ -61,17 +61,17 @@ $logo = $settings['login_logo'] ?? null;
         color: <?php echo $primaryColor; ?> !important;
     }
 </style>
+<link rel="stylesheet" href="public/css/login.css">
 
 <div class="container login-container">
     <div class="col-12 col-md-6 col-lg-4">
         <div class="card card-login border-0 p-4 p-md-5">
             <div class="text-center mb-4">
-                <div class="mb-3 text-primary-custom">
-                    <?php if (!empty($logo)): ?>
-                        <img src="storage/organization/<?php echo e($logo); ?>" alt="Logo" style="max-height: 80px; max-width: 100%;">
-                    <?php else: ?>
-                        <i class="<?php echo e($iconClass); ?> fa-3x"></i>
-                    <?php endif; ?>
+                <div class="owl-container">
+                    <div class="owl">
+                        <img src="assets/owl/owl-base.svg" class="owl-base" alt="Coruja">
+                        <img src="assets/owl/owl-arms.svg" class="owl-arms" alt="">
+                    </div>
                 </div>
                 <h1 class="h4 fw-bold text-dark mb-1"><?php echo e($title); ?></h1>
                 <p class="text-muted small"><?php echo e($subtitle); ?></p>
@@ -85,26 +85,26 @@ $logo = $settings['login_logo'] ?? null;
 
             <form method="post" action="index.php?r=auth/login">
                 <div class="mb-3">
-                    <label class="form-label small text-muted fw-bold">IDENTIFICAÇÃO</label>
+                    <label class="form-label small text-muted fw-bold">E-mail</label>
                     <div class="input-group">
                         <span class="input-group-text text-muted"><i class="fas fa-user"></i></span>
-                        <input type="text" name="identifier" class="form-control" required autofocus placeholder="E-mail, Usuário ou CPF">
+                        <input type="text" name="identifier" class="form-control" required autofocus placeholder="">
                     </div>
                 </div>
                 <div class="mb-4">
-                    <label class="form-label small text-muted fw-bold">SENHA</label>
-                    <div class="input-group">
-                        <span class="input-group-text text-muted"><i class="fas fa-lock"></i></span>
-                        <input type="password" name="password" class="form-control" required placeholder="••••••••">
+                    <label class="form-label small text-muted fw-bold">Senha</label>
+                    <div class="password-wrapper">
+                        <input type="password" name="password" id="password" class="form-control" required placeholder="">
+                        <button type="button" id="togglePassword" aria-label="Mostrar senha" class="toggle-password">👁️</button>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary btn-login w-100 py-2 fw-bold text-uppercase mb-3">
-                    Entrar <i class="fas fa-arrow-right ms-2"></i>
+                    Entrar
                 </button>
             </form>
 
             <div class="d-flex justify-content-between align-items-center mt-3 small">
-                <a href="index.php?r=auth/register" class="text-decoration-none fw-bold text-dark">Criar conta</a>
+                <a href="index.php?r=auth/register" class="text-decoration-none fw-bold text-dark">Ainda não tenho cadastro</a>
                 <a href="index.php?r=auth/forgot" class="text-decoration-none text-muted">Esqueci a senha</a>
             </div>
         </div>
@@ -114,3 +114,4 @@ $logo = $settings['login_logo'] ?? null;
         </div>
     </div>
 </div>
+<script src="public/js/login.js" defer></script>

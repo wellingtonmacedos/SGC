@@ -1,0 +1,17 @@
+<svg width="140" height="140" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="70" cy="80" r="50" fill="#7d7d7d" stroke="#333" stroke-width="2"/>
+  <!-- Ears -->
+  <path d="M35 45 L40 25 L60 40 Z" fill="#7d7d7d" stroke="#333" stroke-width="2"/>
+  <path d="M105 45 L100 25 L80 40 Z" fill="#7d7d7d" stroke="#333" stroke-width="2"/>
+  <!-- Hat -->
+  <path d="M30 35 L70 20 L110 35 L70 50 Z" fill="#333" stroke="#333" stroke-width="2"/>
+  <path d="M110 35 L110 55" stroke="#f0c040" stroke-width="2"/>
+  <circle cx="110" cy="55" r="3" fill="#f0c040"/>
+  <!-- Eyes -->
+  <circle cx="55" cy="75" r="12" fill="white" stroke="#333" stroke-width="2"/>
+  <circle cx="85" cy="75" r="12" fill="white" stroke="#333" stroke-width="2"/>
+  <circle cx="55" cy="75" r="4" fill="black"/>
+  <circle cx="85" cy="75" r="4" fill="black"/>
+  <!-- Beak -->
+  <path d="M70 85 L65 95 L75 95 Z" fill="orange" stroke="#333" stroke-width="1"/>
+</svg>
