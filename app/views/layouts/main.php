@@ -5,36 +5,42 @@ if (!isset($user)) {
     $user = Auth::user();
 }
 
-function e(?string $value): string
-{
-    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+if (!function_exists('e')) {
+    function e(?string $value): string
+    {
+        return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+    }
 }
 
-function formatDateBr(?string $value): string
-{
-    if ($value === null || $value === '') {
-        return '';
+if (!function_exists('formatDateBr')) {
+    function formatDateBr(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        $date = \DateTime::createFromFormat('Y-m-d', substr($value, 0, 10));
+        if ($date === false) {
+            return $value;
+        }
+        return $date->format('d/m/Y');
     }
-    $date = \DateTime::createFromFormat('Y-m-d', substr($value, 0, 10));
-    if ($date === false) {
-        return $value;
-    }
-    return $date->format('d/m/Y');
 }
 
-function formatTimeBr(?string $value): string
-{
-    if ($value === null || $value === '') {
-        return '';
+if (!function_exists('formatTimeBr')) {
+    function formatTimeBr(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        $time = \DateTime::createFromFormat('H:i:s', $value);
+        if ($time === false) {
+            $time = \DateTime::createFromFormat('H:i', $value);
+        }
+        if ($time === false) {
+            return $value;
+        }
+        return $time->format('H:i');
     }
-    $time = \DateTime::createFromFormat('H:i:s', $value);
-    if ($time === false) {
-        $time = \DateTime::createFromFormat('H:i', $value);
-    }
-    if ($time === false) {
-        return $value;
-    }
-    return $time->format('H:i');
 }
 ?>
 <!doctype html>

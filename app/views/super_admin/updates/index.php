@@ -1,6 +1,5 @@
 <?php
 $pageTitle = 'Atualizações do Sistema';
-ob_start();
 ?>
 
 <div class="container-fluid">
@@ -67,7 +66,3 @@ ob_start();
     </div>
 </div>
 
-<?php
-$content = ob_get_clean();
-require __DIR__ . '/../../layouts/main.php';
-?>
