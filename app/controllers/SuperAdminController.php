@@ -73,7 +73,8 @@ class SuperAdminController extends Controller
                     $error = 'Usuário já cadastrado.';
                 } else {
                     try {
-                        $newId = $userModel->createAdmin($name, $email, $cpf, $username, $password);
+                        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+                        $newId = $userModel->createAdmin($name, $cpf, $email, $passwordHash, $username);
                         
                         $logModel = new Log();
                         $logModel->create('admin_created', "Novo administrador criado: $username ($email)", (int)Auth::user()['id']);
@@ -116,16 +117,19 @@ class SuperAdminController extends Controller
 
             // Update logic
             try {
-                $userModel->updateAdmin($id, $name, $email, $cpf, $username, $status);
+                $userModel->updateAdmin($id, $name, $cpf, $email, $username, $status);
                 
                 $logDetails = "Admin atualizado: $username (ID: $id)";
                 if (!empty($password)) {
-                    $userModel->updatePassword($id, $password);
+                    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+                    $userModel->updatePassword($id, $passwordHash, $forceChange);
                     $logDetails .= " - Senha alterada";
                     if ($forceChange) {
-                        $userModel->forcePasswordChange($id);
                         $logDetails .= " (Forçar troca)";
                     }
+                } elseif ($forceChange) {
+                    $userModel->forcePasswordChange($id);
+                    $logDetails .= " (Forçar troca)";
                 }
                 
                 $logModel = new Log();
@@ -191,6 +195,8 @@ class SuperAdminController extends Controller
 
     public function createBackup(): void
     {
+        set_time_limit(0);
+
         if (!$this->isPost()) {
             header('Location: index.php?r=superAdmin/backups');
             exit;
@@ -385,6 +391,7 @@ class SuperAdminController extends Controller
         $endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-t');
         $courseId = isset($_GET['course_id']) && $_GET['course_id'] !== '' ? (int)$_GET['course_id'] : null;
         $status = isset($_GET['status']) && $_GET['status'] !== '' ? $_GET['status'] : null;
+        $hasCertificate = isset($_GET['has_certificate']) && $_GET['has_certificate'] !== '' ? (int)$_GET['has_certificate'] : null;
 
         $stats = [
             'total_candidates' => $userModel->countCandidates(),
@@ -397,7 +404,7 @@ class SuperAdminController extends Controller
         ];
         
         // Filtered Report Data
-        $reportData = $enrollmentModel->getReportStats($startDate, $endDate, $courseId, $status);
+        $reportData = $enrollmentModel->getReportStats($startDate, $endDate, $courseId, $status, $hasCertificate);
         $courses = $courseModel->all();
 
         $this->render('super_admin/reports/index', [
@@ -408,7 +415,8 @@ class SuperAdminController extends Controller
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'course_id' => $courseId,
-                'status' => $status
+                'status' => $status,
+                'has_certificate' => $hasCertificate
             ]
         ]);
     }
@@ -423,8 +431,9 @@ class SuperAdminController extends Controller
         $endDate = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-t');
         $courseId = isset($_GET['course_id']) && $_GET['course_id'] !== '' ? (int)$_GET['course_id'] : null;
         $status = isset($_GET['status']) && $_GET['status'] !== '' ? $_GET['status'] : null;
+        $hasCertificate = isset($_GET['has_certificate']) && $_GET['has_certificate'] !== '' ? (int)$_GET['has_certificate'] : null;
         
-        $data = $enrollmentModel->getReportStats($startDate, $endDate, $courseId, $status);
+        $data = $enrollmentModel->getReportStats($startDate, $endDate, $courseId, $status, $hasCertificate);
 
         if ($format === 'csv') {
             header('Content-Type: text/csv; charset=utf-8');
@@ -438,7 +447,7 @@ class SuperAdminController extends Controller
             fputcsv($output, ["Período: $startDate a $endDate"], ';');
             fputcsv($output, [], ';');
             
-            fputcsv($output, ['ID', 'Curso', 'Candidato', 'Email', 'CPF', 'Status', 'Data Inscrição'], ';');
+            fputcsv($output, ['ID', 'Curso', 'Candidato', 'Email', 'CPF', 'Status', 'Certificado', 'Data Inscrição'], ';');
             
             foreach ($data as $row) {
                 fputcsv($output, [
@@ -448,6 +457,7 @@ class SuperAdminController extends Controller
                     $row['email'],
                     $row['cpf'],
                     $row['status'],
+                    $row['has_certificate'] ? 'Sim' : 'Não',
                     $row['created_at']
                 ], ';');
             }
@@ -487,6 +497,30 @@ class SuperAdminController extends Controller
         }
         
         $this->render('super_admin/updates/index', ['version' => $version]);
+    }
+
+    public function runUpdate(): void
+    {
+        try {
+            $migrator = new \App\Core\Migrator();
+            $basePath = dirname(__DIR__, 2);
+            $migrationPath = $basePath . '/database/migrations';
+            
+            $executed = $migrator->runMigrations($migrationPath);
+            
+            $logModel = new Log();
+            if (count($executed) > 0) {
+                $msg = "Atualização web executada. Migrações: " . implode(', ', $executed);
+                $logModel->create('system_update', $msg, (int)Auth::user()['id']);
+                header('Location: index.php?r=superAdmin/updates&success=updated&count=' . count($executed));
+            } else {
+                $logModel->create('system_update_check', "Verificação de atualização (sem mudanças)", (int)Auth::user()['id']);
+                header('Location: index.php?r=superAdmin/updates&success=no_changes');
+            }
+        } catch (\Exception $e) {
+            header('Location: index.php?r=superAdmin/updates&error=' . urlencode($e->getMessage()));
+        }
+        exit;
     }
 
     // --- Login Settings ---

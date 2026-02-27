@@ -65,7 +65,8 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
-            </form>
+                </form>
+            </div>
             
             <script>
             document.getElementById('photoInput').addEventListener('change', function(event) {

@@ -48,10 +48,12 @@ class AdminController extends Controller
         $perPage = 10;
         $searchName = isset($_GET['search']) ? trim($_GET['search']) : '';
         $filterStatus = isset($_GET['filter_status']) ? trim($_GET['filter_status']) : '';
+        $filterCertificate = isset($_GET['filter_certificate']) ? trim($_GET['filter_certificate']) : '';
         
         $filters = [];
         if ($searchName) $filters['name'] = $searchName;
         if ($filterStatus) $filters['status'] = $filterStatus;
+        if ($filterCertificate !== '') $filters['has_certificate'] = $filterCertificate;
         
         $totalCourses = $courseModel->countFiltered($filters);
         $totalPages = ceil($totalCourses / $perPage);
@@ -71,6 +73,8 @@ class AdminController extends Controller
             $status = $this->getPostString('status');
             $allowEnrollment = isset($_POST['allow_enrollment']);
             $maxEnrollments = isset($_POST['max_enrollments']) ? (int)$_POST['max_enrollments'] : 0;
+            $minAge = isset($_POST['min_age']) && $_POST['min_age'] !== '' ? (int)$_POST['min_age'] : null;
+            $hasCertificate = isset($_POST['has_certificate']) ? 1 : 0;
 
             if (empty($name) || empty($description)) {
                 $error = 'Nome e descrição são obrigatórios.';
@@ -143,13 +147,21 @@ class AdminController extends Controller
                     'status' => $status,
                     'allow_enrollment' => $allowEnrollment,
                     'max_enrollments' => $maxEnrollments,
+                    'min_age' => $minAge,
+                    'has_certificate' => $hasCertificate,
                 ];
 
                 if ($id > 0) {
+                    $existingCourse = $courseModel->findById($id);
                     $courseModel->update($id, $data);
                     
                     $logModel = new Log();
                     $logModel->create('course_updated', "Curso atualizado: $name (ID: $id)", (int)Auth::user()['id']);
+
+                    if ($existingCourse && $existingCourse['has_certificate'] != $hasCertificate) {
+                        $statusCert = $hasCertificate ? 'ativado' : 'desativado';
+                        $logModel->create('certificate_config_changed', "Certificado $statusCert para o curso: $name (ID: $id)", (int)Auth::user()['id']);
+                    }
                 } else {
                     $newId = $courseModel->create($data);
                     
@@ -183,6 +195,7 @@ class AdminController extends Controller
             'totalPages' => $totalPages,
             'searchName' => $searchName,
             'filterStatus' => $filterStatus,
+            'filterCertificate' => $filterCertificate,
             'totalCourses' => $totalCourses
         ]);
     }
@@ -239,6 +252,8 @@ class AdminController extends Controller
             $confirmPassword = $this->getPostString('confirm_password');
             $phone = $this->getPostString('phone');
             $address = $this->getPostString('address');
+            $birthDate = $this->getPostString('birth_date');
+            $birthDate = $birthDate !== '' ? $birthDate : null;
 
             if (!$name || !$username || !$cpf || !$email || !$password || !$address) {
                 $error = 'Preencha todos os campos obrigatórios';
@@ -302,7 +317,7 @@ class AdminController extends Controller
 
                     if (!$error) {
                         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-                        $id = $userModel->createCandidate($name, $cpf, $email, $passwordHash, $username, $phone, $address, $photoPath);
+                        $id = $userModel->createCandidate($name, $cpf, $email, $passwordHash, $username, $phone, $address, $photoPath, $birthDate);
                         
                         $logModel = new Log();
                         $logModel->create('candidate_created_by_admin', "Novo candidato criado: $name (ID: $id)", (int)Auth::user()['id']);
@@ -342,6 +357,8 @@ class AdminController extends Controller
             $email = $this->getPostString('email');
             $phone = $this->getPostString('phone');
             $address = $this->getPostString('address');
+            $birthDate = $this->getPostString('birth_date');
+            $birthDate = $birthDate !== '' ? $birthDate : null;
             $newPassword = $this->getPostString('new_password');
             $forcePasswordChange = isset($_POST['force_password_change']);
 
@@ -405,7 +422,7 @@ class AdminController extends Controller
                     }
 
                     if (!$error) {
-                        $userModel->updateCandidateCompleto($id, $name, $cpf, $email, $username, $phone, $address, $photoPath);
+                        $userModel->updateCandidateCompleto($id, $name, $cpf, $email, $username, $phone, $address, $photoPath, $birthDate);
                         
                         $logDetails = "Candidato atualizado: $username (ID: $id)";
 
@@ -561,6 +578,7 @@ class AdminController extends Controller
                     // Course Info
                     fputcsv($output, ['Curso: ' . $course['name']], ';');
                     fputcsv($output, ['Instrutor: ' . $course['instructor'], 'Período: ' . $course['period']], ';');
+                    fputcsv($output, ['Certificado: ' . ($course['has_certificate'] ? 'Sim' : 'Não')], ';');
                     fputcsv($output, [], ';'); // Empty line
 
                     // Data Table
@@ -678,7 +696,6 @@ class AdminController extends Controller
         $courses = $courseModel->all();
         $candidates = $userModel->listCandidates();
 
-        // AJAX request for courses by user
         if (isset($_GET['ajax']) && $_GET['ajax'] === 'courses' && isset($_GET['user_id'])) {
             $userId = (int)$_GET['user_id'];
             if ($userId > 0) {
@@ -691,10 +708,30 @@ class AdminController extends Controller
                 }, $enrolledCourses);
                 
                 header('Content-Type: application/json');
-                echo json_encode($result);
+                echo json_encode(array_values($result));
                 exit;
             }
             echo json_encode([]);
+            exit;
+        }
+
+        if (isset($_GET['ajax']) && $_GET['ajax'] === 'candidate_search') {
+            $term = isset($_GET['term']) ? trim($_GET['term']) : '';
+            if ($term === '') {
+                echo json_encode([]);
+                exit;
+            }
+
+            $results = $userModel->searchCandidates($term);
+            $payload = array_map(function ($row) {
+                return [
+                    'id' => (int)$row['id'],
+                    'label' => $row['name'] . ' - ' . $row['email'] . (!empty($row['cpf']) ? ' - CPF: ' . $row['cpf'] : ''),
+                ];
+            }, $results);
+
+            header('Content-Type: application/json');
+            echo json_encode($payload);
             exit;
         }
 
@@ -708,56 +745,61 @@ class AdminController extends Controller
             if ($userId <= 0 || $courseId <= 0) {
                 $error = 'Selecione candidato e curso';
             } else {
-                $enrollment = $enrollmentModel->findByUserAndCourse($userId, $courseId);
-                if (!$enrollment) {
-                    $enrollmentId = $enrollmentModel->create($userId, $courseId);
-                    $enrollment = $enrollmentModel->find($enrollmentId);
+                $course = $courseModel->findById($courseId);
+                if (!$course || !$course['has_certificate']) {
+                    $error = 'Este curso não permite a emissão de certificados';
                 } else {
-                    $enrollmentId = (int)$enrollment['id'];
-                }
-
-                if (!$enrollment) {
-                    $error = 'Inscrição não encontrada';
-                } elseif (!isset($_FILES['certificate']) || $_FILES['certificate']['error'] !== UPLOAD_ERR_OK) {
-                    $error = 'Envio de arquivo inválido';
-                } else {
-                    $file = $_FILES['certificate'];
-                    if ($file['size'] > CERTIFICATE_MAX_SIZE) {
-                        $error = 'Arquivo excede o tamanho máximo permitido';
+                    $enrollment = $enrollmentModel->findByUserAndCourse($userId, $courseId);
+                    if (!$enrollment) {
+                        $enrollmentId = $enrollmentModel->create($userId, $courseId);
+                        $enrollment = $enrollmentModel->find($enrollmentId);
                     } else {
-                        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-                        $mimeType = $finfo->file($file['tmp_name']);
-                        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                        $enrollmentId = (int)$enrollment['id'];
+                    }
 
-                        if ($extension !== 'pdf' || $mimeType !== 'application/pdf') {
-                            $error = 'Apenas arquivos PDF são permitidos';
+                    if (!$enrollment) {
+                        $error = 'Inscrição não encontrada';
+                    } elseif (!isset($_FILES['certificate']) || $_FILES['certificate']['error'] !== UPLOAD_ERR_OK) {
+                        $error = 'Envio de arquivo inválido';
+                    } else {
+                        $file = $_FILES['certificate'];
+                        if ($file['size'] > CERTIFICATE_MAX_SIZE) {
+                            $error = 'Arquivo excede o tamanho máximo permitido';
                         } else {
-                            if (!is_dir(CERTIFICATE_PATH)) {
-                                mkdir(CERTIFICATE_PATH, 0775, true);
-                            }
+                            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                            $mimeType = $finfo->file($file['tmp_name']);
+                            $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
-                            $fileName = sha1_file($file['tmp_name']) . '_' . time() . '.pdf';
-                            $targetPath = CERTIFICATE_PATH . '/' . $fileName;
-
-                            if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-                                $error = 'Falha ao salvar o arquivo';
+                            if ($extension !== 'pdf' || $mimeType !== 'application/pdf') {
+                                $error = 'Apenas arquivos PDF são permitidos';
                             } else {
-                                $certificateModel->create(
-                                    $enrollmentId,
-                                    $fileName,
-                                    $file['name'],
-                                    (int)$file['size'],
-                                    $mimeType
-                                );
-
-                                $enrollmentModel->updateStatus($enrollmentId, 'certificate_available');
-
-                                $user = $userModel->findById((int)$enrollment['user_id']);
-                                if ($user) {
-                                    Mailer::send($user['email'], 'Certificado disponível', 'Seu certificado está disponível no painel do candidato.');
+                                if (!is_dir(CERTIFICATE_PATH)) {
+                                    mkdir(CERTIFICATE_PATH, 0775, true);
                                 }
 
-                                $success = 'Certificado enviado com sucesso';
+                                $fileName = sha1_file($file['tmp_name']) . '_' . time() . '.pdf';
+                                $targetPath = CERTIFICATE_PATH . '/' . $fileName;
+
+                                if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+                                    $error = 'Falha ao salvar o arquivo';
+                                } else {
+                                    $certificateModel->create(
+                                        $enrollmentId,
+                                        $fileName,
+                                        $file['name'],
+                                        (int)$file['size'],
+                                        $mimeType
+                                    );
+
+                                    $enrollmentModel->updateStatus($enrollmentId, 'certificate_available');
+
+                                    $user = $userModel->findById((int)$enrollment['user_id']);
+                                    if ($user) {
+                                        Mailer::send($user['email'], 'Certificado disponível', 'Seu certificado está disponível no painel do candidato.');
+                                    }
+
+                                    $success = 'Certificado enviado com sucesso';
+                                }
                             }
                         }
                     }

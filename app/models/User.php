@@ -62,9 +62,9 @@ class User extends Model
         return $user ?: null;
     }
 
-    public function createCandidate(string $name, string $cpf, string $email, string $passwordHash, string $username, ?string $phone = null, ?string $address = null, ?string $photo = null): int
+    public function createCandidate(string $name, string $cpf, string $email, string $passwordHash, string $username, ?string $phone = null, ?string $address = null, ?string $photo = null, ?string $birthDate = null): int
     {
-        $stmt = $this->db->prepare('INSERT INTO users (name, cpf, email, password_hash, username, phone, address, photo, role, created_at) VALUES (:name, :cpf, :email, :password_hash, :username, :phone, :address, :photo, :role, NOW())');
+        $stmt = $this->db->prepare('INSERT INTO users (name, cpf, email, password_hash, username, phone, address, photo, birth_date, role, created_at) VALUES (:name, :cpf, :email, :password_hash, :username, :phone, :address, :photo, :birth_date, :role, NOW())');
         $stmt->execute([
             'name' => $name,
             'cpf' => $cpf,
@@ -74,6 +74,7 @@ class User extends Model
             'phone' => $phone,
             'address' => $address,
             'photo' => $photo,
+            'birth_date' => $birthDate,
             'role' => 'candidate',
         ]);
 
@@ -117,6 +118,32 @@ class User extends Model
     public function listCandidates(): array
     {
         $stmt = $this->db->query("SELECT id, name, email, cpf, username, phone, address, photo FROM users WHERE role = 'candidate' ORDER BY name");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function searchCandidates(string $term): array
+    {
+        $like = '%' . $term . '%';
+        $cleanCpf = preg_replace('/[^0-9]/', '', $term);
+
+        $sql = "SELECT id, name, email, cpf FROM users 
+                WHERE role = 'candidate' 
+                  AND (
+                        name LIKE :term 
+                        OR email LIKE :term 
+                        OR username LIKE :term";
+
+        $params = ['term' => $like];
+
+        if ($cleanCpf !== '') {
+            $sql .= " OR cpf LIKE :cpf";
+            $params['cpf'] = '%' . $cleanCpf . '%';
+        }
+
+        $sql .= ") ORDER BY name LIMIT 20";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -207,9 +234,9 @@ class User extends Model
         ]);
     }
 
-    public function updateCandidateCompleto(int $id, string $name, string $cpf, string $email, string $username, ?string $phone, ?string $address, ?string $photo): void
+    public function updateCandidateCompleto(int $id, string $name, string $cpf, string $email, string $username, ?string $phone, ?string $address, ?string $photo, ?string $birthDate = null): void
     {
-        $sql = 'UPDATE users SET name = :name, cpf = :cpf, email = :email, username = :username, phone = :phone, address = :address';
+        $sql = 'UPDATE users SET name = :name, cpf = :cpf, email = :email, username = :username, phone = :phone, address = :address, birth_date = :birth_date';
         $params = [
             'name' => $name,
             'cpf' => $cpf,
@@ -217,6 +244,7 @@ class User extends Model
             'username' => $username,
             'phone' => $phone,
             'address' => $address,
+            'birth_date' => $birthDate,
             'id' => $id,
         ];
 
@@ -231,15 +259,16 @@ class User extends Model
         $stmt->execute($params);
     }
 
-    public function updateProfile(int $id, string $name, string $email, string $username, ?string $phone, string $address, ?string $photo): void
+    public function updateProfile(int $id, string $name, string $email, string $username, ?string $phone, string $address, ?string $photo, ?string $birthDate = null): void
     {
-        $sql = 'UPDATE users SET name = :name, email = :email, username = :username, phone = :phone, address = :address';
+        $sql = 'UPDATE users SET name = :name, email = :email, username = :username, phone = :phone, address = :address, birth_date = :birth_date';
         $params = [
             'name' => $name,
             'email' => $email,
             'username' => $username,
             'phone' => $phone,
             'address' => $address,
+            'birth_date' => $birthDate,
             'id' => $id,
         ];
 
@@ -262,5 +291,11 @@ class User extends Model
             'email' => $email,
             'id' => $id,
         ]);
+    }
+
+    public function forcePasswordChange(int $id): void
+    {
+        $stmt = $this->db->prepare('UPDATE users SET force_password_change = 1 WHERE id = :id');
+        $stmt->execute(['id' => $id]);
     }
 }

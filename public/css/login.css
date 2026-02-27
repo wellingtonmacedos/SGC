@@ -1,78 +1,96 @@
+/* Owl Login Animation */
 .owl-container {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  margin-bottom: 16px;
-  height: 100px; /* Reserve space */
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 20px;
+    position: relative;
+    /* overflow: hidden; Removed to allow arms to be seen if they just peek, or we can hide them. Usually we hide overflow of container if we want them to disappear completely */
+    overflow: hidden; 
 }
 
 .owl {
-  position: relative;
-  width: 100px;
-  height: 100px;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.owl img {
+    width: 100%;
+    position: absolute;
+    left: 0;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Bouncy effect */
 }
 
 .owl-base {
-  width: 100%;
-  display: block;
+    bottom: 0;
+    z-index: 1;
 }
 
 .owl-arms {
-  position: absolute;
-  top: 0; /* Adjusted for SVG alignment (was 18px for PNGs) */
-  left: 0;
-  width: 100%;
-  transform: translateY(-40px); /* Start position (lifted) */
-  opacity: 0;
-  transition: all 0.35s ease-in-out;
-  pointer-events: none;
+    top: 0;
+    transform: translateY(-100%); /* Start hidden above */
+    z-index: 2;
+    opacity: 0; /* Hide completely when up if needed, or just move up */
 }
 
+/* State: Cover Eyes (when typing password) */
 .owl.cover-eyes .owl-arms {
-  transform: translateY(0); /* End position (covering eyes) */
-  opacity: 1;
+    transform: translateY(0); /* Move down to cover eyes */
+    opacity: 1;
 }
 
-/* Campo senha */
+/* Password Toggle Button */
 .password-wrapper {
-  position: relative;
+    position: relative;
 }
 
-.password-wrapper input {
-  width: 100%;
-  padding-right: 44px; /* Space for the button */
+.password-wrapper .form-control {
+    padding-right: 45px; /* Space for the eye icon */
 }
 
 .toggle-password {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  color: #6c757d;
-  padding: 0;
-  z-index: 10;
-  transition: color 0.2s;
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0;
+    line-height: 1;
+    color: #6c757d;
+    z-index: 10;
+    outline: none;
 }
 
 .toggle-password:hover {
-  color: #343a40;
+    color: #343a40;
 }
 
 .toggle-password:focus {
-  outline: none;
+    outline: none;
 }
 
-/* Desktop refinamento */
-@media (min-width: 768px) {
-  .owl {
-    width: 120px;
-    height: 120px;
-  }
-  .owl-container {
-      height: 120px;
-  }
+/* Scroll container for long forms */
+.form-scroll-container {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+/* Scroll suave e discreto */
+.form-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.form-scroll-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.25);
+    border-radius: 6px;
+}
+
+@media (max-width: 480px) {
+    .form-scroll-container {
+        max-height: 75vh;
+    }
 }

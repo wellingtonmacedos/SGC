@@ -42,12 +42,15 @@ foreach ($certificatesByUser as $certs) {
                     <form method="post" action="index.php?r=admin/certificates" enctype="multipart/form-data" class="needs-validation">
                         <div class="mb-3">
                             <label class="form-label fw-bold text-secondary small text-uppercase">Candidato</label>
-                            <select name="user_id" class="form-select" required>
-                                <option value="">Selecione o aluno...</option>
-                                <?php foreach ($candidates as $candidate): ?>
-                                    <option value="<?php echo (int)$candidate['id']; ?>"><?php echo e($candidate['name']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" id="candidateSearch" class="form-control" placeholder="Digite nome, e-mail ou CPF...">
+                            </div>
+                            <input type="hidden" name="user_id" id="selectedUserId" required>
+                            <div id="candidateSearchResults" class="list-group mt-2" style="max-height: 220px; overflow-y: auto;"></div>
+                            <div class="form-text text-muted small mt-1">
+                                Busque pelo aluno por nome, e-mail ou CPF e clique para selecionar.
+                            </div>
                         </div>
                         
                         <div class="mb-3">
@@ -184,6 +187,16 @@ foreach ($certificatesByUser as $certs) {
 </div>
 
 <script>
+const allCandidates = <?php
+    $candidatePayload = array_map(function ($c) {
+        return [
+            'id' => (int)$c['id'],
+            'label' => $c['name'] . ' - ' . $c['email'] . (!empty($c['cpf']) ? ' - CPF: ' . $c['cpf'] : ''),
+        ];
+    }, $candidates);
+    echo json_encode($candidatePayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+?>;
+
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('certSearch');
     const userGroups = document.querySelectorAll('.cert-user-group');
@@ -203,43 +216,91 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Dynamic Course Loading
-    const candidateSelect = document.querySelector('select[name="user_id"]');
+    const candidateInput = document.getElementById('candidateSearch');
+    const candidateResults = document.getElementById('candidateSearchResults');
+    const selectedUserIdInput = document.getElementById('selectedUserId');
     const courseSelect = document.getElementById('courseSelect');
     
-    if (candidateSelect && courseSelect) {
-        candidateSelect.addEventListener('change', function() {
-            const userId = this.value;
-            
-            // Reset state
-            courseSelect.innerHTML = '<option value="">Carregando...</option>';
+    function loadCoursesForUser(userId) {
+        courseSelect.innerHTML = '<option value="">Carregando...</option>';
+        courseSelect.disabled = true;
+        
+        if (!userId) {
+            courseSelect.innerHTML = '<option value="">Selecione o aluno primeiro...</option>';
+            return;
+        }
+
+        fetch(`index.php?r=admin/certificates&ajax=courses&user_id=${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    courseSelect.innerHTML = '<option value="">Selecione o curso...</option>';
+                    data.forEach(course => {
+                        const option = document.createElement('option');
+                        option.value = course.id;
+                        option.textContent = course.name;
+                        courseSelect.appendChild(option);
+                    });
+                    courseSelect.disabled = false;
+                } else {
+                     courseSelect.innerHTML = '<option value="">Nenhum curso inscrito</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                courseSelect.innerHTML = '<option value="">Erro ao carregar cursos</option>';
+            });
+    }
+
+    if (candidateInput && candidateResults && selectedUserIdInput && courseSelect) {
+        let searchTimeout = null;
+
+        candidateInput.addEventListener('input', function() {
+            const term = this.value.trim();
+
+            selectedUserIdInput.value = '';
+            courseSelect.innerHTML = '<option value="">Selecione o aluno primeiro...</option>';
             courseSelect.disabled = true;
-            
-            if (!userId) {
-                courseSelect.innerHTML = '<option value="">Selecione o aluno primeiro...</option>';
+            candidateResults.innerHTML = '';
+
+            if (term.length < 2) {
                 return;
             }
 
-            fetch(`index.php?r=admin/certificates&ajax=courses&user_id=${userId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.length > 0) {
-                        courseSelect.innerHTML = '<option value="">Selecione o curso...</option>';
-                        data.forEach(course => {
-                            const option = document.createElement('option');
-                            option.value = course.id;
-                            option.textContent = course.name;
-                            courseSelect.appendChild(option);
-                        });
-                        courseSelect.disabled = false;
-                    } else {
-                         courseSelect.innerHTML = '<option value="">Nenhum curso inscrito</option>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    courseSelect.innerHTML = '<option value="">Erro ao carregar cursos</option>';
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+
+            searchTimeout = setTimeout(() => {
+                const lowerTerm = term.toLowerCase();
+                const results = allCandidates.filter(item =>
+                    item.label.toLowerCase().includes(lowerTerm)
+                );
+
+                candidateResults.innerHTML = '';
+
+                if (!results.length) {
+                    const emptyItem = document.createElement('div');
+                    emptyItem.className = 'list-group-item list-group-item-action disabled';
+                    emptyItem.textContent = 'Nenhum aluno encontrado';
+                    candidateResults.appendChild(emptyItem);
+                    return;
+                }
+
+                results.forEach(item => {
+                    const el = document.createElement('button');
+                    el.type = 'button';
+                    el.className = 'list-group-item list-group-item-action';
+                    el.textContent = item.label;
+                    el.addEventListener('click', () => {
+                        candidateInput.value = item.label;
+                        selectedUserIdInput.value = item.id;
+                        candidateResults.innerHTML = '';
+                        loadCoursesForUser(item.id);
+                    });
+                    candidateResults.appendChild(el);
                 });
+            }, 300);
         });
     }
 });
