@@ -71,17 +71,37 @@ class Migrator
                 // Run migration
                 $sql = file_get_contents($path . '/' . $file);
                 try {
-                    $this->db->beginTransaction();
+                    // Start transaction if possible
+                    try {
+                        $this->db->beginTransaction();
+                    } catch (\Exception $e) {
+                        // Ignore if transaction already active or not supported
+                    }
+
                     $this->db->exec($sql);
                     
                     $stmt = $this->db->prepare("INSERT INTO migrations (migration, batch, executed_at) VALUES (:migration, :batch, NOW())");
                     $stmt->execute(['migration' => $file, 'batch' => $batch]);
                     
-                    $this->db->commit();
+                    if ($this->db->inTransaction()) {
+                        $this->db->commit();
+                    }
                     $executed[] = $file;
                 } catch (\Exception $e) {
-                    $this->db->rollBack();
-                    throw $e;
+                    // Handle "no active transaction" caused by MySQL DDL implicit commits
+                    $msg = $e->getMessage();
+                    if (strpos($msg, 'no active transaction') !== false || strpos($msg, 'There is no active transaction') !== false) {
+                         $executed[] = $file;
+                    } else {
+                        if ($this->db->inTransaction()) {
+                            try {
+                                $this->db->rollBack();
+                            } catch (\Exception $rollbackEx) {
+                                // Ignore rollback error
+                            }
+                        }
+                        throw $e;
+                    }
                 }
             }
         }
