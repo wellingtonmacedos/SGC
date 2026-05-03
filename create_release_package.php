@@ -55,6 +55,7 @@ $files = [
     'app/views/candidate/change_password.php',
     'app/views/candidate/profile.php',
     'app/views/candidate/export_data_print.php',
+    'app/views/layouts/main.php',
     'app/views/privacy_policy/index.php',
     'app/views/super_admin/admins/form.php',
     'app/views/super_admin/login_settings.php',
