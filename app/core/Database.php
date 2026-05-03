@@ -23,6 +23,10 @@ class Database
             try {
                 self::$connection = new PDO($dsn, DB_USER, DB_PASS, $options);
             } catch (PDOException $e) {
+                $host = defined('DB_HOST') ? DB_HOST : '';
+                $name = defined('DB_NAME') ? DB_NAME : '';
+                $user = defined('DB_USER') ? DB_USER : '';
+                error_log('DB connection failed: ' . $e->getMessage() . ' | host=' . $host . ' db=' . $name . ' user=' . $user);
                 http_response_code(500);
                 echo 'Erro de conexão com o banco de dados';
                 exit;
@@ -32,4 +36,3 @@ class Database
         return self::$connection;
     }
 }
-

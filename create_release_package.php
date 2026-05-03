@@ -15,7 +15,6 @@ echo "Criando pacote de atualização: $filename\n";
 
 // Lista de arquivos modificados/criados recentemente
 $files = [
-    'config.php',
     'index.php',
 
     // Core
