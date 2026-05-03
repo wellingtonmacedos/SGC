@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Controller;
 use App\Models\Organization;
+use App\Models\Log;
 
 class OrganizationController extends Controller
 {
@@ -19,6 +20,7 @@ class OrganizationController extends Controller
         $success = '';
 
         if ($this->isPost()) {
+            $this->requireCsrf();
             $data = [
                 'organization_name' => $this->getPostString('organization_name'),
                 'cnpj' => $this->getPostString('cnpj'),
@@ -80,6 +82,8 @@ class OrganizationController extends Controller
                 try {
                     $orgModel->updateSettings($data);
                     $success = 'Configurações atualizadas com sucesso!';
+                    $logModel = new Log();
+                    $logModel->create('organization_settings_updated', 'Configurações do órgão atualizadas', (int)Auth::user()['id']);
                     $settings = $orgModel->getSettings(); // Refresh
                 } catch (\Exception $e) {
                     $error = 'Erro ao salvar: ' . $e->getMessage();

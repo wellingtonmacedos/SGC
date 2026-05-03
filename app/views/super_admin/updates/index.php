@@ -7,6 +7,30 @@ $pageTitle = 'Atualizações do Sistema';
         <h2 class="mb-0 text-gray-800">Atualizações e Versionamento</h2>
     </div>
 
+    <?php if (isset($_GET['success'])): ?>
+        <?php if ($_GET['success'] === 'updated'): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                Sistema atualizado com sucesso! <?php echo isset($_GET['count']) ? $_GET['count'] . ' migrações executadas.' : ''; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php elseif ($_GET['success'] === 'no_changes'): ?>
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="fas fa-info-circle me-2"></i>
+                O sistema já está atualizado. Nenhuma pendência encontrada.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['error'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Erro na atualização: <?php echo htmlspecialchars($_GET['error']); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
     <div class="row">
         <div class="col-md-6 mb-4">
             <div class="card border-left-primary shadow h-100 py-2">
@@ -33,12 +57,23 @@ $pageTitle = 'Atualizações do Sistema';
                 </div>
                 <div class="card-body">
                     <p>O sistema está operando normalmente.</p>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Para atualizar o sistema, execute o script de atualização via linha de comando (SSH).
+
+                    <div class="d-grid gap-2 mb-3">
+                        <form method="post" action="index.php?r=superAdmin/runUpdate" onsubmit="return confirm('Tem certeza? Recomenda-se fazer um backup antes.');">
+                            <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-sync-alt me-2"></i> Executar Atualização Agora
+                            </button>
+                        </form>
                     </div>
-                    <pre class="bg-light p-3 border rounded">php update_system.php</pre>
-                    <small class="text-muted">Certifique-se de que os backups automáticos estão configurados no Cron Job.</small>
+
+                    <div class="alert alert-light border">
+                        <i class="fas fa-terminal me-2"></i>
+                        Alternativa via SSH:
+                        <pre class="bg-light p-2 mt-2 mb-0 border rounded">php update_system.php</pre>
+                    </div>
+                    
+                    <small class="text-muted">Certifique-se de que os backups estão em dia.</small>
                 </div>
             </div>
         </div>
@@ -65,4 +100,3 @@ $pageTitle = 'Atualizações do Sistema';
         </div>
     </div>
 </div>
-

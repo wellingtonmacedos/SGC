@@ -71,13 +71,9 @@ $totalCandidates = count($candidates);
                             <td class="ps-4">
                                 <div class="d-flex align-items-center">
                                     <div class="me-3">
-                                        <?php if (!empty($candidate['photo'])): ?>
-                                            <img src="index.php?r=file/photo&file=<?php echo e($candidate['photo']); ?>" alt="Foto" class="rounded-circle shadow-sm object-fit-cover" style="width: 45px; height: 45px;">
-                                        <?php else: ?>
-                                            <div class="avatar-circle bg-secondary bg-opacity-10 text-secondary rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 45px; height: 45px;">
-                                                <i class="fas fa-user"></i>
-                                            </div>
-                                        <?php endif; ?>
+                                        <div class="avatar-circle bg-secondary bg-opacity-10 text-secondary rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 45px; height: 45px;">
+                                            <i class="fas fa-user"></i>
+                                        </div>
                                     </div>
                                     <div>
                                         <div class="fw-bold text-dark candidate-name"><?php echo e($candidate['name']); ?></div>
@@ -87,24 +83,33 @@ $totalCandidates = count($candidates);
                             </td>
                             <td>
                                 <div class="d-flex flex-column">
-                                    <span class="badge bg-light text-dark border candidate-cpf"><i class="far fa-id-card me-1 text-muted"></i> <?php echo e($candidate['cpf']); ?></span>
+                                    <span class="badge bg-light text-dark border candidate-cpf"><i class="far fa-id-card me-1 text-muted"></i> <?php echo e(maskCpf($candidate['cpf'] ?? '')); ?></span>
                                 </div>
                             </td>
                             <td>
                                 <div class="small">
-                                    <div class="mb-1 candidate-email"><i class="far fa-envelope me-2 text-muted width-20"></i><?php echo e($candidate['email']); ?></div>
-                                    <div class="candidate-phone"><i class="fas fa-phone me-2 text-muted width-20"></i><?php echo e($candidate['phone'] ?? '-'); ?></div>
+                                    <div class="mb-1 candidate-email"><i class="far fa-envelope me-2 text-muted width-20"></i><?php echo e(maskEmail($candidate['email'] ?? '')); ?></div>
+                                    <div class="candidate-phone"><i class="fas fa-phone me-2 text-muted width-20"></i><?php echo e($candidate['phone'] ? maskPhone($candidate['phone']) : '-'); ?></div>
                                 </div>
                             </td>
                             <td>
-                                <small class="text-muted text-truncate d-inline-block" style="max-width: 150px;" title="<?php echo e($candidate['address'] ?? ''); ?>">
-                                    <i class="fas fa-map-marker-alt me-1 text-muted"></i> <?php echo e(mb_strimwidth($candidate['address'] ?? '-', 0, 30, '...')); ?>
+                                <small class="text-muted text-truncate d-inline-block" style="max-width: 150px;">
+                                    <i class="fas fa-map-marker-alt me-1 text-muted"></i> Oculto
                                 </small>
                             </td>
                             <td class="text-end pe-4">
                                 <a href="index.php?r=admin/edit-candidate&id=<?php echo $candidate['id']; ?>" class="btn btn-sm btn-outline-primary shadow-sm" title="Editar Cadastro">
                                     <i class="fas fa-pen"></i> <span class="d-none d-lg-inline ms-1">Editar</span>
                                 </a>
+                                <?php if (isset($user['role']) && $user['role'] === 'super_admin'): ?>
+                                    <form method="post" action="index.php?r=admin/anonymize-candidate" class="d-inline ms-1" onsubmit="return confirm('Tem certeza que deseja anonimizar este candidato? Esta ação é irreversível.');">
+                                        <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
+                                        <input type="hidden" name="id" value="<?php echo (int)$candidate['id']; ?>">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning shadow-sm" title="Anonimizar">
+                                            <i class="fas fa-user-shield"></i>
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
                                 <a href="index.php?r=admin/candidates&delete=<?php echo $candidate['id']; ?>" class="btn btn-sm btn-outline-danger shadow-sm ms-1" onclick="return confirm('Tem certeza que deseja excluir este candidato? Esta ação não pode ser desfeita e removerá o acesso do usuário.');" title="Excluir Candidato">
                                     <i class="fas fa-trash-alt"></i>
                                 </a>

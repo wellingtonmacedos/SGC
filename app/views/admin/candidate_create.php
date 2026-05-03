@@ -23,6 +23,7 @@ $title = 'Novo Candidato - Admin';
                     <?php endif; ?>
 
                     <form method="post" action="index.php?r=admin/create-candidate" enctype="multipart/form-data" class="needs-validation">
+                        <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                         <div class="row g-3">
                             <div class="col-12">
                                 <label class="form-label fw-bold text-secondary small text-uppercase">Nome Completo <span class="text-danger">*</span></label>
@@ -45,6 +46,11 @@ $title = 'Novo Candidato - Admin';
                             <div class="col-12">
                                 <label class="form-label fw-bold text-secondary small text-uppercase">E-mail <span class="text-danger">*</span></label>
                                 <input type="email" name="email" class="form-control" required value="<?php echo isset($_POST['email']) ? e($_POST['email']) : ''; ?>">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-secondary small text-uppercase">Data de Nascimento <span class="text-danger">*</span></label>
+                                <input type="date" name="birth_date" class="form-control" required value="<?php echo isset($_POST['birth_date']) ? e($_POST['birth_date']) : ''; ?>">
                             </div>
 
                             <div class="col-md-6">

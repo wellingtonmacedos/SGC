@@ -76,7 +76,12 @@ function jsonSafe(array $data): string {
                     <?php foreach ($courses as $course): ?>
                         <tr>
                             <td class="ps-4">
-                                <div class="fw-bold text-dark"><?php echo e($course['name']); ?></div>
+                                <div class="fw-bold text-dark">
+                                    <?php echo e($course['name']); ?>
+                                    <?php if (!empty($course['has_certificate'])): ?>
+                                        <i class="fas fa-certificate text-warning ms-1" title="Emite Certificado"></i>
+                                    <?php endif; ?>
+                                </div>
                                 <div class="small text-muted text-truncate" style="max-width: 200px;"><?php echo e($course['description']); ?></div>
                             </td>
                             <td>
@@ -208,6 +213,7 @@ function jsonSafe(array $data): string {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="post" action="index.php?r=admin/courses" enctype="multipart/form-data" id="courseForm">
+                <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                 <div class="modal-body">
                     <input type="hidden" name="id" id="courseId" value="">
                     
@@ -231,6 +237,12 @@ function jsonSafe(array $data): string {
                             <label class="form-label"><i class="fas fa-users-cog me-1"></i>Limite de Inscrições</label>
                             <input type="number" name="max_enrollments" id="courseMaxEnrollments" class="form-control" min="0" placeholder="0 para ilimitado">
                             <div class="form-text">Deixe vazio ou zero para inscrições ilimitadas</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="fas fa-child me-1"></i>Idade Mínima (Opcional)</label>
+                            <input type="number" name="min_age" id="courseMinAge" class="form-control" min="0" placeholder="Ex: 18">
+                            <div class="form-text">Deixe vazio para sem restrição</div>
                         </div>
                         
                         <div class="col-md-6">
@@ -278,10 +290,16 @@ function jsonSafe(array $data): string {
                         </div>
                         
                         <div class="col-12">
-                            <div class="form-check form-switch">
+                            <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" name="allow_enrollment" id="courseAllowEnrollment" checked>
                                 <label class="form-check-label" for="courseAllowEnrollment">
                                     Disponível para inscrições dos candidatos
+                                </label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="has_certificate" id="courseHasCertificate" value="1" checked>
+                                <label class="form-check-label" for="courseHasCertificate">
+                                    Este curso gera certificado após conclusão
                                 </label>
                             </div>
                         </div>
@@ -323,7 +341,9 @@ function editCourse(course) {
     document.getElementById('courseLocation').value = course.location;
     document.getElementById('courseStatus').value = course.status;
     document.getElementById('courseAllowEnrollment').checked = (parseInt(course.allow_enrollment) === 1);
+    document.getElementById('courseHasCertificate').checked = (parseInt(course.has_certificate) === 1);
     document.getElementById('courseMaxEnrollments').value = course.max_enrollments > 0 ? course.max_enrollments : '';
+    document.getElementById('courseMinAge').value = course.min_age > 0 ? course.min_age : '';
     
     var modal = new bootstrap.Modal(document.getElementById('courseModal'));
     modal.show();

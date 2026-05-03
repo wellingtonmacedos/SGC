@@ -40,6 +40,7 @@ foreach ($certificatesByUser as $certs) {
                     <p class="text-muted small mb-4">Selecione o aluno e o curso para vincular o certificado em PDF.</p>
                     
                     <form method="post" action="index.php?r=admin/certificates" enctype="multipart/form-data" class="needs-validation">
+                        <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                         <div class="mb-3">
                             <label class="form-label fw-bold text-secondary small text-uppercase">Candidato</label>
                             <div class="input-group">

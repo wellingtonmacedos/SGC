@@ -24,6 +24,18 @@ class Log extends Model
         ]);
     }
 
+    public function countRecentByIpAction(string $action, string $ip, int $windowSeconds): int
+    {
+        $since = date('Y-m-d H:i:s', time() - max(0, $windowSeconds));
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM logs WHERE action = :action AND ip_address = :ip AND created_at >= :since');
+        $stmt->execute([
+            'action' => $action,
+            'ip' => $ip,
+            'since' => $since,
+        ]);
+        return (int)$stmt->fetchColumn();
+    }
+
     public function getLatest(int $limit = 100): array
     {
         $sql = "SELECT l.*, u.name as user_name, u.email as user_email, u.role as user_role 

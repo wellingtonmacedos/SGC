@@ -9,6 +9,14 @@ use App\Core\Auth;
 
 $route = isset($_GET['r']) ? trim((string)$_GET['r'], '/') : '';
 
+if ($route === '' && isset($_SERVER['REQUEST_URI'])) {
+    $path = (string)parse_url((string)$_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $path = trim($path, '/');
+    if ($path !== '' && $path !== 'index.php') {
+        $route = $path;
+    }
+}
+
 if ($route === '') {
     $user = Auth::user();
     if ($user && $user['role'] === 'admin') {
@@ -22,7 +30,8 @@ if ($route === '') {
 
 [$controllerName, $action] = array_pad(explode('/', $route, 2), 2, 'index');
 
-$controllerClass = 'App\\Controllers\\' . ucfirst($controllerName) . 'Controller';
+$studlyController = str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $controllerName)));
+$controllerClass = 'App\\Controllers\\' . $studlyController . 'Controller';
 $actionMethod = str_replace('-', '', $action);
 
 if (!class_exists($controllerClass)) {
@@ -40,4 +49,3 @@ if (!method_exists($controller, $actionMethod)) {
 }
 
 call_user_func([$controller, $actionMethod]);
-

@@ -14,6 +14,7 @@
 <?php endif; ?>
 
 <form method="POST" enctype="multipart/form-data" class="needs-validation">
+    <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
     <div class="row">
         <!-- Dados Gerais -->
         <div class="col-md-8">

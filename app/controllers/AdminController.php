@@ -60,6 +60,7 @@ class AdminController extends Controller
         $courses = $courseModel->paginate($page, $perPage, $filters);
 
         if ($this->isPost()) {
+            $this->requireCsrf();
             $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
             $name = $this->getPostString('name');
             $description = $this->getPostString('description');
@@ -244,6 +245,7 @@ class AdminController extends Controller
         $error = '';
 
         if ($this->isPost()) {
+            $this->requireCsrf();
             $name = $this->getPostString('name');
             $username = $this->getPostString('username');
             $cpf = preg_replace('/[^0-9]/', '', $this->getPostString('cpf'));
@@ -351,6 +353,7 @@ class AdminController extends Controller
         }
 
         if ($this->isPost()) {
+            $this->requireCsrf();
             $name = $this->getPostString('name');
             $username = $this->getPostString('username');
             $cpf = preg_replace('/[^0-9]/', '', $this->getPostString('cpf'));
@@ -448,12 +451,41 @@ class AdminController extends Controller
                 }
             }
         }
+        
+        if (!$this->isPost()) {
+            $logModel = new Log();
+            $logModel->create('sensitive_data_view', "Visualização de dados sensíveis do candidato (ID: $id)", (int)Auth::user()['id']);
+        }
 
         $this->render('admin/candidate_edit', [
             'candidate' => $candidate,
             'error' => $error,
             'success' => $success
         ]);
+    }
+
+    public function anonymizeCandidate(): void
+    {
+        Auth::requireSuperAdmin();
+        if (!$this->isPost()) {
+            $this->redirect('admin/candidates');
+        }
+        $this->requireCsrf();
+        $id = $this->getPostInt('id');
+        if ($id <= 0) {
+            $this->redirect('admin/candidates&success=Operação inválida');
+        }
+
+        $userModel = new User();
+        $candidate = $userModel->findById($id);
+        if (!$candidate || $candidate['role'] !== 'candidate') {
+            $this->redirect('admin/candidates&success=Operação inválida');
+        }
+
+        $userModel->anonymizeCandidate($id);
+        $logModel = new Log();
+        $logModel->create('candidate_anonymized', "Anonimização de candidato (ID: $id)", (int)Auth::user()['id']);
+        $this->redirect('admin/candidates&success=Candidato anonimizado com sucesso');
     }
 
     private function validateCpf(string $cpf): bool
@@ -514,6 +546,7 @@ class AdminController extends Controller
 
         // Handle Manual Enrollment
         if ($this->isPost() && isset($_GET['action']) && $_GET['action'] === 'create') {
+            $this->requireCsrf();
             $userId = $this->getPostInt('user_id');
             $courseId = $this->getPostInt('course_id');
 
@@ -551,6 +584,9 @@ class AdminController extends Controller
                 $organizationModel = new Organization();
                 $orgSettings = $organizationModel->getSettings();
                 $course = $courseModel->find($selectedCourseId);
+                $format = (string)$_GET['export'];
+                $logModel = new Log();
+                $logModel->create('report_export', "Exportação de inscritos (Curso ID: $selectedCourseId, Formato: $format)", (int)Auth::user()['id']);
 
                 if ($_GET['export'] === 'csv') {
                     header('Content-Type: text/csv; charset=utf-8');
@@ -739,6 +775,7 @@ class AdminController extends Controller
         $success = '';
 
         if ($this->isPost()) {
+            $this->requireCsrf();
             $userId = $this->getPostInt('user_id');
             $courseId = $this->getPostInt('course_id');
 

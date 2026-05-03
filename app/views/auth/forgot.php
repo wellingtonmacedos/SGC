@@ -9,6 +9,7 @@
             <div class="alert alert-success">Se o e-mail estiver cadastrado, enviaremos as instruções.</div>
         <?php else: ?>
             <form method="post" action="index.php?r=auth/forgot">
+                <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                 <div class="mb-3">
                     <label class="form-label">E-mail</label>
                     <input type="email" name="email" class="form-control" required>

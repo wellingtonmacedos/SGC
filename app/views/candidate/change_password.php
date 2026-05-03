@@ -13,6 +13,7 @@
                 <?php endif; ?>
 
                 <form method="post" action="index.php?r=candidate/change-password">
+                    <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                     <div class="mb-3">
                         <label class="form-label">Nova Senha</label>
                         <input type="password" name="password" class="form-control" required autofocus>

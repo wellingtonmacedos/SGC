@@ -62,21 +62,55 @@ class User extends Model
         return $user ?: null;
     }
 
-    public function createCandidate(string $name, string $cpf, string $email, string $passwordHash, string $username, ?string $phone = null, ?string $address = null, ?string $photo = null, ?string $birthDate = null): int
+    public function createCandidate(
+        string $name,
+        string $cpf,
+        string $email,
+        string $passwordHash,
+        string $username,
+        ?string $phone = null,
+        ?string $address = null,
+        ?string $photo = null,
+        ?string $birthDate = null,
+        int $lgpdConsent = 0,
+        ?string $lgpdConsentAt = null,
+        ?string $lgpdConsentIp = null,
+        ?string $privacyPolicyVersion = null
+    ): int
     {
-        $stmt = $this->db->prepare('INSERT INTO users (name, cpf, email, password_hash, username, phone, address, photo, birth_date, role, created_at) VALUES (:name, :cpf, :email, :password_hash, :username, :phone, :address, :photo, :birth_date, :role, NOW())');
-        $stmt->execute([
-            'name' => $name,
-            'cpf' => $cpf,
-            'email' => $email,
-            'password_hash' => $passwordHash,
-            'username' => $username,
-            'phone' => $phone,
-            'address' => $address,
-            'photo' => $photo,
-            'birth_date' => $birthDate,
-            'role' => 'candidate',
-        ]);
+        try {
+            $stmt = $this->db->prepare('INSERT INTO users (name, cpf, email, password_hash, username, phone, address, photo, birth_date, lgpd_consent, lgpd_consent_at, lgpd_consent_ip, privacy_policy_version, role, created_at) VALUES (:name, :cpf, :email, :password_hash, :username, :phone, :address, :photo, :birth_date, :lgpd_consent, :lgpd_consent_at, :lgpd_consent_ip, :privacy_policy_version, :role, NOW())');
+            $stmt->execute([
+                'name' => $name,
+                'cpf' => $cpf,
+                'email' => $email,
+                'password_hash' => $passwordHash,
+                'username' => $username,
+                'phone' => $phone,
+                'address' => $address,
+                'photo' => $photo,
+                'birth_date' => $birthDate,
+                'lgpd_consent' => $lgpdConsent,
+                'lgpd_consent_at' => $lgpdConsentAt,
+                'lgpd_consent_ip' => $lgpdConsentIp,
+                'privacy_policy_version' => $privacyPolicyVersion,
+                'role' => 'candidate',
+            ]);
+        } catch (\PDOException $e) {
+            $stmt = $this->db->prepare('INSERT INTO users (name, cpf, email, password_hash, username, phone, address, photo, birth_date, role, created_at) VALUES (:name, :cpf, :email, :password_hash, :username, :phone, :address, :photo, :birth_date, :role, NOW())');
+            $stmt->execute([
+                'name' => $name,
+                'cpf' => $cpf,
+                'email' => $email,
+                'password_hash' => $passwordHash,
+                'username' => $username,
+                'phone' => $phone,
+                'address' => $address,
+                'photo' => $photo,
+                'birth_date' => $birthDate,
+                'role' => 'candidate',
+            ]);
+        }
 
         return (int)$this->db->lastInsertId();
     }
@@ -281,6 +315,34 @@ class User extends Model
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
+    }
+
+    public function anonymizeCandidate(int $id): void
+    {
+        $placeholderCpf = '999' . str_pad((string)$id, 8, '0', STR_PAD_LEFT);
+        $placeholderEmail = 'anon' . $id . '@example.invalid';
+        $placeholderUsername = 'anon' . $id;
+        $placeholderName = 'Anônimo ' . $id;
+
+        try {
+            $stmt = $this->db->prepare('UPDATE users SET name = :name, cpf = :cpf, email = :email, username = :username, phone = NULL, address = NULL, photo = NULL, birth_date = NULL, lgpd_consent = 0, lgpd_consent_at = NULL, lgpd_consent_ip = NULL, privacy_policy_version = NULL WHERE id = :id AND role = "candidate"');
+            $stmt->execute([
+                'name' => $placeholderName,
+                'cpf' => $placeholderCpf,
+                'email' => $placeholderEmail,
+                'username' => $placeholderUsername,
+                'id' => $id,
+            ]);
+        } catch (\PDOException $e) {
+            $stmt = $this->db->prepare('UPDATE users SET name = :name, cpf = :cpf, email = :email, username = :username, phone = NULL, address = NULL, photo = NULL, birth_date = NULL WHERE id = :id AND role = "candidate"');
+            $stmt->execute([
+                'name' => $placeholderName,
+                'cpf' => $placeholderCpf,
+                'email' => $placeholderEmail,
+                'username' => $placeholderUsername,
+                'id' => $id,
+            ]);
+        }
     }
 
     public function update(int $id, string $name, string $email): void

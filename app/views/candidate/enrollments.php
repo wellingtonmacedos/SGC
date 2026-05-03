@@ -69,6 +69,7 @@
                                     
                                     <?php if ($status !== 'certificate_available' && $status !== 'completed'): ?>
                                         <form method="post" action="index.php?r=candidate/enrollments" class="d-inline" onsubmit="return confirm('Tem certeza que deseja cancelar sua inscrição neste curso? Esta ação não pode ser desfeita.');">
+                                            <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                                             <input type="hidden" name="action" value="cancel">
                                             <input type="hidden" name="enrollment_id" value="<?php echo $enrollment['id']; ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancelar Inscrição">

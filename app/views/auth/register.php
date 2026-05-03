@@ -9,6 +9,7 @@
             <div class="alert alert-success">Cadastro realizado com sucesso. Você já pode fazer login.</div>
         <?php else: ?>
             <form method="post" action="index.php?r=auth/register" enctype="multipart/form-data" novalidate>
+                <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                 <div class="row">
                     <div class="col-md-12 mb-3">
                         <label class="form-label">Nome Completo <span class="text-danger">*</span></label>
@@ -64,8 +65,18 @@
                     </div>
                 </div>
 
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" name="lgpd_consent" id="lgpd_consent" required <?php echo isset($_POST['lgpd_consent']) ? 'checked' : ''; ?>>
+                    <label class="form-check-label" for="lgpd_consent">
+                        Li e concordo com a <a href="privacy-policy" target="_blank" rel="noopener">Política de Privacidade</a> e o tratamento dos meus dados pessoais para fins de inscrição e certificação.
+                    </label>
+                </div>
+
                 <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
-                </form>
+                <div class="text-center mt-3">
+                    <a href="index.php?r=auth/login">Já tem conta? Entrar</a>
+                </div>
+            </form>
             </div>
             
             <script>

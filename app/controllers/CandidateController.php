@@ -26,11 +26,13 @@ class CandidateController extends Controller
         $success = '';
 
         if ($this->isPost()) {
+            $this->requireCsrf();
             $name = $this->getPostString('name');
             $email = $this->getPostString('email');
             $username = $this->getPostString('username');
             $phone = $this->getPostString('phone');
             $address = $this->getPostString('address');
+            $birthDate = $this->getPostString('birth_date');
             $password = $this->getPostString('password');
             $confirmPassword = $this->getPostString('confirm_password');
 
@@ -105,17 +107,23 @@ class CandidateController extends Controller
                             $username,
                             $phone,
                             $address,
-                            $photoPath
+                            $photoPath,
+                            $birthDate
                         );
                         
                         // Update session
                         $user['name'] = $name;
                         $user['email'] = $email;
                         $user['username'] = $username;
+                        $user['phone'] = $phone;
+                        $user['address'] = $address;
                         $user['photo'] = $photoPath;
+                        $user['birth_date'] = $birthDate;
                         Auth::login($user);
                         
                         $success = 'Perfil atualizado com sucesso!';
+                        $logModel = new \App\Models\Log();
+                        $logModel->create('profile_updated', 'Alteração de cadastro do candidato', (int)$user['id']);
                         // Refresh data
                         $user = $userModel->findById((int)$user['id']);
                     }
@@ -143,6 +151,7 @@ class CandidateController extends Controller
         $error = '';
 
         if ($this->isPost() && isset($_POST['course_id'])) {
+            $this->requireCsrf();
             $courseId = $this->getPostInt('course_id');
             if ($courseId > 0) {
                 if ($enrollmentModel->exists($user['id'], $courseId)) {
@@ -155,9 +164,33 @@ class CandidateController extends Controller
                         // Check actual count from db to be safe
                         $currentCount = $enrollmentModel->countByCourse($courseId);
                         
-                        if ($maxEnrollments > 0 && $currentCount >= $maxEnrollments) {
+                        // Age Validation
+                        $minAge = (int)($course['min_age'] ?? 0);
+                        if ($minAge > 0) {
+                            $userModel = new User();
+                            $userFull = $userModel->findById((int)$user['id']);
+                            
+                            if (empty($userFull['birth_date'])) {
+                                $error = 'Este curso exige idade mínima. Por favor, atualize seu perfil com sua data de nascimento para se inscrever.';
+                            } else {
+                                $age = $this->calculateAge($userFull['birth_date']);
+                                if ($age < $minAge) {
+                                    $error = "Este curso exige idade mínima de {$minAge} anos. Sua idade atual não atende ao requisito.";
+                                    
+                                    // Log blocked attempt
+                                    $logModel = new \App\Models\Log();
+                                    $logModel->create(
+                                        'enrollment_blocked_age',
+                                        "Tentativa de inscrição bloqueada por idade: {$user['name']} (ID: {$user['id']}) em {$course['name']} (ID: {$courseId}). Idade: {$age}, Mínima: {$minAge}",
+                                        (int)$user['id'] // Log as user action? Or maybe system? Using user id as actor.
+                                    );
+                                }
+                            }
+                        }
+
+                        if (!$error && $maxEnrollments > 0 && $currentCount >= $maxEnrollments) {
                             $error = 'As inscrições para este curso estão encerradas.';
-                        } else {
+                        } elseif (!$error) {
                             $enrollmentModel->create($user['id'], $courseId);
 
                             // Send emails
@@ -259,6 +292,7 @@ class CandidateController extends Controller
 
         // Handle cancellation
         if ($this->isPost() && isset($_POST['action']) && $_POST['action'] === 'cancel') {
+            $this->requireCsrf();
             $enrollmentId = $this->getPostInt('enrollment_id');
             $enrollment = $enrollmentModel->find($enrollmentId);
 
@@ -339,6 +373,7 @@ class CandidateController extends Controller
         $error = '';
 
         if ($this->isPost()) {
+            $this->requireCsrf();
             $password = $this->getPostString('password');
             $confirmPassword = $this->getPostString('confirm_password');
 
@@ -360,5 +395,90 @@ class CandidateController extends Controller
         }
 
         $this->render('candidate/change_password', ['error' => $error]);
+    }
+
+    public function exportData(): void
+    {
+        Auth::requireCandidate();
+        $user = Auth::user();
+        $format = isset($_GET['format']) ? (string)$_GET['format'] : 'csv';
+
+        $userModel = new User();
+        $enrollmentModel = new Enrollment();
+        $certificateModel = new Certificate();
+
+        $userFull = $userModel->findById((int)$user['id']);
+        $enrollments = $enrollmentModel->listByUser((int)$user['id']);
+        $certificates = $certificateModel->listByUser((int)$user['id']);
+
+        $logModel = new \App\Models\Log();
+        $logModel->create('data_export', "Exportação de dados do titular (Formato: $format)", (int)$user['id']);
+
+        if ($format === 'csv') {
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="meus_dados_' . date('Y-m-d') . '.csv"');
+            $output = fopen('php://output', 'w');
+            fputs($output, "\xEF\xBB\xBF");
+
+            fputcsv($output, ['Dados do Titular'], ';');
+            fputcsv($output, ['Gerado em', date('Y-m-d H:i:s')], ';');
+            fputcsv($output, [], ';');
+
+            if ($userFull) {
+                fputcsv($output, ['Cadastro'], ';');
+                fputcsv($output, ['Nome', $userFull['name'] ?? ''], ';');
+                fputcsv($output, ['Email', $userFull['email'] ?? ''], ';');
+                fputcsv($output, ['Usuário', $userFull['username'] ?? ''], ';');
+                fputcsv($output, ['CPF', $userFull['cpf'] ?? ''], ';');
+                fputcsv($output, ['Telefone', $userFull['phone'] ?? ''], ';');
+                fputcsv($output, ['Endereço', $userFull['address'] ?? ''], ';');
+                fputcsv($output, ['Data de Nascimento', $userFull['birth_date'] ?? ''], ';');
+                fputcsv($output, [], ';');
+                fputcsv($output, ['Consentimento'], ';');
+                fputcsv($output, ['LGPD', (int)($userFull['lgpd_consent'] ?? 0) === 1 ? 'Sim' : 'Não'], ';');
+                fputcsv($output, ['Aceito em', $userFull['lgpd_consent_at'] ?? ''], ';');
+                fputcsv($output, ['IP', $userFull['lgpd_consent_ip'] ?? ''], ';');
+                fputcsv($output, ['Versão', $userFull['privacy_policy_version'] ?? ''], ';');
+                fputcsv($output, [], ';');
+            }
+
+            fputcsv($output, ['Inscrições'], ';');
+            fputcsv($output, ['Curso', 'Status', 'Data Inscrição', 'Certificado'], ';');
+            foreach ($enrollments as $row) {
+                fputcsv($output, [
+                    $row['course_name'] ?? '',
+                    $row['status'] ?? '',
+                    $row['created_at'] ?? '',
+                    !empty($row['has_certificate']) ? 'Sim' : 'Não',
+                ], ';');
+            }
+            fputcsv($output, [], ';');
+
+            fputcsv($output, ['Certificados'], ';');
+            fputcsv($output, ['Curso', 'Arquivo', 'Data'], ';');
+            foreach ($certificates as $row) {
+                fputcsv($output, [
+                    $row['course_name'] ?? '',
+                    $row['original_name'] ?? '',
+                    $row['created_at'] ?? '',
+                ], ';');
+            }
+            fclose($output);
+            exit;
+        }
+
+        $this->render('candidate/export_data_print', [
+            'user' => $userFull,
+            'enrollments' => $enrollments,
+            'certificates' => $certificates,
+            'pageTitle' => 'Exportação de Dados'
+        ]);
+    }
+
+    private function calculateAge(string $birthDate): int
+    {
+        $today = new \DateTime();
+        $birth = new \DateTime($birthDate);
+        return $today->diff($birth)->y;
     }
 }

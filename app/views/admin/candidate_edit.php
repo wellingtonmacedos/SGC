@@ -19,6 +19,7 @@
         <div class="card">
             <div class="card-body">
                 <form method="post" action="index.php?r=admin/edit-candidate&id=<?php echo $candidate['id']; ?>" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                     <h5 class="card-title mb-4">Dados Pessoais</h5>
                     
                     <div class="row">
@@ -45,6 +46,13 @@
                             <label class="form-label">E-mail <span class="text-danger">*</span></label>
                             <input type="email" name="email" class="form-control" required value="<?php echo e($candidate['email']); ?>">
                         </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Data de Nascimento <span class="text-danger">*</span></label>
+                            <input type="date" name="birth_date" class="form-control" required value="<?php echo e($candidate['birth_date'] ?? ''); ?>">
+                        </div>
+                    </div>
+
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Telefone</label>
                             <input type="text" name="phone" class="form-control" value="<?php echo e($candidate['phone'] ?? ''); ?>">

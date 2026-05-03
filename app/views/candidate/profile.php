@@ -18,7 +18,13 @@
                     </div>
                 <?php endif; ?>
 
+                <div class="d-flex gap-2 mb-3">
+                    <a class="btn btn-outline-secondary btn-sm" href="index.php?r=candidate/export-data&format=csv">Exportar meus dados (CSV)</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="index.php?r=candidate/export-data&format=pdf" target="_blank" rel="noopener">Exportar meus dados (PDF)</a>
+                </div>
+
                 <form method="post" action="index.php?r=candidate/profile" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                     <div class="mb-3">
                         <label for="name" class="form-label text-muted small text-uppercase fw-bold">Nome Completo</label>
                         <input type="text" class="form-control" id="name" name="name" value="<?php echo e($user['name']); ?>" required>
@@ -38,6 +44,11 @@
                     <div class="mb-3">
                         <label for="email" class="form-label text-muted small text-uppercase fw-bold">E-mail</label>
                         <input type="email" class="form-control" id="email" name="email" value="<?php echo e($user['email']); ?>" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="birth_date" class="form-label text-muted small text-uppercase fw-bold">Data de Nascimento</label>
+                        <input type="date" class="form-control" id="birth_date" name="birth_date" value="<?php echo e($user['birth_date'] ?? ''); ?>">
                     </div>
 
                     <div class="mb-3">

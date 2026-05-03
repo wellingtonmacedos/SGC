@@ -17,6 +17,7 @@
                     <?php endif; ?>
 
                     <form method="post" action="index.php?r=superAdmin/<?php echo $action === 'create' ? 'createAdmin' : 'editAdmin&id=' . $admin['id']; ?>">
+                        <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                         <div class="row g-3">
                             <div class="col-12">
                                 <h5 class="mb-3 text-muted border-bottom pb-2">Dados Pessoais</h5>

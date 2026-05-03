@@ -8,6 +8,7 @@ use App\Core\Auth;
 use App\Models\Report;
 use App\Models\Organization;
 use App\Models\Course;
+use App\Models\Log;
 
 class ReportController extends Controller
 {
@@ -100,6 +101,8 @@ class ReportController extends Controller
     {
         $orgSettings = $this->organizationModel->getSettings();
         $filename = 'relatorio_' . $type . '_' . date('Y-m-d_H-i');
+        $logModel = new Log();
+        $logModel->create('report_export', "Exportação de relatório (Tipo: $type, Formato: $format)", (int)Auth::user()['id']);
 
         if ($format === 'csv') {
             header('Content-Type: text/csv; charset=utf-8');

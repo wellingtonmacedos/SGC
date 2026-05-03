@@ -119,6 +119,25 @@ foreach ($enrollments as $enr) {
                                         <span><?php echo e($course['location']); ?></span>
                                     </div>
                                 <?php endif; ?>
+
+                                <?php if (isset($course['has_certificate']) && $course['has_certificate']): ?>
+                                    <div class="d-flex align-items-center text-success small mt-2">
+                                        <i class="fas fa-check-circle me-2 width-20"></i>
+                                        <span class="fw-bold">Este curso emite certificado</span>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="d-flex align-items-center text-muted small mt-2">
+                                        <i class="fas fa-info-circle me-2 width-20"></i>
+                                        <span>Esta atividade não gera certificado</span>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($course['min_age']) && $course['min_age'] > 0): ?>
+                                    <div class="d-flex align-items-center text-muted small mt-2">
+                                        <i class="fas fa-child me-2 text-primary width-20"></i>
+                                        <p class="course-age mb-0">Idade mínima exigida: <strong><?php echo (int)$course['min_age']; ?> anos</strong></p>
+                                    </div>
+                                <?php endif; ?>
                             </div>
 
                             <div class="mt-auto">
@@ -160,6 +179,7 @@ foreach ($enrollments as $enr) {
                                         </div>
                                     <?php else: ?>
                                         <form method="post" action="index.php?r=candidate/dashboard" class="d-grid">
+                                            <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                                             <input type="hidden" name="course_id" value="<?php echo $course['id']; ?>">
                                             <button type="submit" class="btn btn-primary fw-bold py-2 shadow-sm btn-hover-effect">
                                                 <i class="fas fa-check-circle me-2"></i> Inscrever-se

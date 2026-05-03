@@ -22,6 +22,32 @@ class Controller
         return $_SERVER['REQUEST_METHOD'] === 'POST';
     }
 
+    protected function requireCsrf(): void
+    {
+        if (!$this->isPost()) {
+            return;
+        }
+        $token = isset($_POST['csrf_token']) ? (string)$_POST['csrf_token'] : '';
+        $sessionToken = isset($_SESSION['csrf_token']) ? (string)$_SESSION['csrf_token'] : '';
+        if ($token === '' || $sessionToken === '' || !hash_equals($sessionToken, $token)) {
+            http_response_code(403);
+            echo 'Requisição inválida';
+            exit;
+        }
+    }
+
+    protected function getClientIp(): ?string
+    {
+        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $parts = explode(',', (string)$_SERVER['HTTP_X_FORWARDED_FOR']);
+            $ip = trim($parts[0] ?? '');
+            if ($ip !== '') {
+                return $ip;
+            }
+        }
+        return $_SERVER['REMOTE_ADDR'] ?? null;
+    }
+
     protected function getPostString(string $key, string $default = ''): string
     {
         return isset($_POST[$key]) ? trim((string)$_POST[$key]) : $default;
@@ -32,4 +58,3 @@ class Controller
         return isset($_POST[$key]) ? (int)$_POST[$key] : $default;
     }
 }
-

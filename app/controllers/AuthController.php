@@ -19,11 +19,34 @@ class AuthController extends Controller
         $error = '';
 
         if ($this->isPost()) {
+            $this->requireCsrf();
             $identifier = $this->getPostString('identifier');
             $password = $this->getPostString('password');
 
             $userModel = new User();
             $user = $userModel->findByIdentifier($identifier);
+
+            $ip = $this->getClientIp();
+            $logModel = new Log();
+            if ($ip) {
+                $recentFails = $logModel->countRecentByIpAction('login_failed', $ip, defined('LOGIN_RATE_LIMIT_WINDOW_SECONDS') ? LOGIN_RATE_LIMIT_WINDOW_SECONDS : 900);
+                $maxAttempts = defined('LOGIN_RATE_LIMIT_MAX_ATTEMPTS') ? LOGIN_RATE_LIMIT_MAX_ATTEMPTS : 8;
+                if ($recentFails >= $maxAttempts) {
+                    $error = 'Muitas tentativas. Aguarde e tente novamente.';
+                    $logModel->create('login_rate_limited', 'Bloqueio temporário por excesso de tentativas', null);
+                }
+            }
+
+            if ($error !== '') {
+                $organizationModel = new Organization();
+                $settings = $organizationModel->getSettings();
+
+                $this->render('auth/login', [
+                    'error' => $error,
+                    'settings' => $settings
+                ]);
+                return;
+            }
 
             if ($user && password_verify($password, $user['password_hash'])) {
                 if (isset($user['status']) && $user['status'] === 'inactive') {
@@ -32,7 +55,6 @@ class AuthController extends Controller
                     Auth::login($user);
                     
                     // Log Login Success
-                    $logModel = new Log();
                     $logModel->create('login', 'Login realizado com sucesso', (int)$user['id']);
                     
                     if (isset($user['force_password_change']) && $user['force_password_change']) {
@@ -52,7 +74,6 @@ class AuthController extends Controller
                 // Log Login Failure (Optional: might spam DB, but requested)
                 // Need to be careful not to log passwords.
                 // Since we don't have user ID, we log null.
-                $logModel = new Log();
                 $logModel->create('login_failed', "Tentativa de login falha para identificador: " . substr($identifier, 0, 50), null);
             }
         }
@@ -73,6 +94,7 @@ class AuthController extends Controller
         $success = false;
 
         if ($this->isPost()) {
+            $this->requireCsrf();
             $name = $this->getPostString('name');
             $username = $this->getPostString('username');
             $cpf = preg_replace('/[^0-9]/', '', $this->getPostString('cpf'));
@@ -81,6 +103,7 @@ class AuthController extends Controller
             $address = $this->getPostString('address');
             $password = $this->getPostString('password');
             $confirmPassword = $this->getPostString('confirm_password');
+            $lgpdConsent = isset($_POST['lgpd_consent']) ? 1 : 0;
 
             // Validations
             if (!$name || !$username || !$cpf || !$email || !$address || !$password) {
@@ -95,6 +118,8 @@ class AuthController extends Controller
                 $error = 'E-mail inválido';
             } elseif ($password !== $confirmPassword) {
                 $error = 'As senhas não conferem';
+            } elseif ($lgpdConsent !== 1) {
+                $error = 'Para concluir o cadastro, você precisa concordar com a Política de Privacidade.';
             } else {
                 $userModel = new User();
                 if ($userModel->findByEmail($email)) {
@@ -136,6 +161,9 @@ class AuthController extends Controller
 
                     if (!$error) {
                         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+                        $consentAt = date('Y-m-d H:i:s');
+                        $consentIp = $this->getClientIp();
+                        $policyVersion = defined('PRIVACY_POLICY_VERSION') ? PRIVACY_POLICY_VERSION : null;
                         $userId = $userModel->createCandidate(
                             $name, 
                             $cpf, 
@@ -144,12 +172,20 @@ class AuthController extends Controller
                             $username,
                             $phone,
                             $address,
-                            $photoPath
+                            $photoPath,
+                            null,
+                            1,
+                            $consentAt,
+                            $consentIp,
+                            $policyVersion
                         );
                         
                         // Mailer calls...
                         Mailer::send(MAIL_ADMIN_ADDRESS, 'Novo cadastro de candidato', 'Novo candidato cadastrado: ' . htmlspecialchars($name));
                         Mailer::send($email, 'Cadastro realizado com sucesso', 'Seu cadastro no SGC foi realizado com sucesso.');
+
+                        $logModel = new Log();
+                        $logModel->create('lgpd_consent_given', 'Consentimento de privacidade registrado no cadastro', (int)$userId);
 
                         $success = true;
                     }
@@ -160,6 +196,7 @@ class AuthController extends Controller
         $this->render('auth/register', [
             'error' => $error,
             'success' => $success,
+            'privacyPolicyVersion' => defined('PRIVACY_POLICY_VERSION') ? PRIVACY_POLICY_VERSION : null,
         ]);
     }
 
@@ -204,6 +241,7 @@ class AuthController extends Controller
         $success = false;
 
         if ($this->isPost()) {
+            $this->requireCsrf();
             $email = $this->getPostString('email');
 
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -229,6 +267,8 @@ class AuthController extends Controller
                     $link = $baseUrl . '/index.php?r=auth/reset&token=' . urlencode($token);
 
                     Mailer::send($user['email'], 'Recuperação de senha', 'Para redefinir sua senha, acesse: ' . $link);
+                    $logModel = new Log();
+                    $logModel->create('password_reset_requested', 'Solicitação de redefinição de senha', (int)$user['id']);
                     $success = true;
                 }
             }
@@ -270,6 +310,7 @@ class AuthController extends Controller
         }
 
         if ($this->isPost()) {
+            $this->requireCsrf();
             $password = $this->getPostString('password');
             $confirmPassword = $this->getPostString('confirm_password');
 
@@ -283,6 +324,8 @@ class AuthController extends Controller
                 $userModel->updatePassword((int)$reset['user_id'], $passwordHash);
 
                 $resetModel->deleteById((int)$reset['id']);
+                $logModel = new Log();
+                $logModel->create('password_reset_completed', 'Redefinição de senha concluída via token', (int)$reset['user_id']);
                 $success = true;
             }
         }

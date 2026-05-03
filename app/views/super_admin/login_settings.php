@@ -28,6 +28,7 @@
                 </div>
                 <div class="card-body p-4">
                     <form method="post" action="index.php?r=superAdmin/loginSettings" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                         
                         <div class="row mb-4">
                             <div class="col-md-6">

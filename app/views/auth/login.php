@@ -84,6 +84,7 @@ $logo = $settings['login_logo'] ?? null;
             <?php endif; ?>
 
             <form method="post" action="index.php?r=auth/login">
+                <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                 <div class="mb-3">
                     <label class="form-label small text-muted fw-bold">E-mail</label>
                     <div class="input-group">
@@ -106,6 +107,9 @@ $logo = $settings['login_logo'] ?? null;
             <div class="d-flex justify-content-between align-items-center mt-3 small">
                 <a href="index.php?r=auth/register" class="text-decoration-none fw-bold text-dark">Ainda não tenho cadastro</a>
                 <a href="index.php?r=auth/forgot" class="text-decoration-none text-muted">Esqueci a senha</a>
+            </div>
+            <div class="text-center mt-3 small">
+                <a href="privacy-policy" class="text-decoration-none text-muted" target="_blank" rel="noopener">Política de Privacidade</a>
             </div>
         </div>
         

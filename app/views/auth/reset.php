@@ -9,6 +9,7 @@
             <div class="alert alert-success">Senha alterada com sucesso. Você já pode fazer login.</div>
         <?php else: ?>
             <form method="post" action="index.php?r=auth/reset&amp;token=<?php echo e($token); ?>">
+                <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                 <div class="mb-3">
                     <label class="form-label">Nova senha</label>
                     <input type="password" name="password" class="form-control" required>

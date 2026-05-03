@@ -102,6 +102,7 @@
                 
                 <?php if (!$isEnrolled && !$isFull && $course['status'] === 'active' && $course['allow_enrollment']): ?>
                     <form action="index.php?r=candidate/dashboard" method="post" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                         <input type="hidden" name="course_id" value="<?php echo $course['id']; ?>">
                         <button type="submit" class="btn cta-button btn-lg shadow-lg">
                             Inscreva-se Agora
@@ -188,6 +189,24 @@
                                     <strong><?php echo date('d/m/Y', strtotime($course['date'])); ?></strong>
                                 </div>
                             </div>
+
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="info-icon"><i class="fas fa-certificate"></i></div>
+                                <div>
+                                    <small class="text-muted d-block">Certificado</small>
+                                    <strong><?php echo !empty($course['has_certificate']) ? 'Sim' : 'Não'; ?></strong>
+                                </div>
+                            </div>
+
+                            <?php if (!empty($course['min_age']) && $course['min_age'] > 0): ?>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="info-icon"><i class="fas fa-child"></i></div>
+                                <div>
+                                    <small class="text-muted d-block">Idade Mínima</small>
+                                    <strong><?php echo (int)$course['min_age']; ?> anos</strong>
+                                </div>
+                            </div>
+                            <?php endif; ?>
 
                             <div class="d-flex align-items-center">
                                 <div class="info-icon"><i class="fas fa-map-marker-alt"></i></div>

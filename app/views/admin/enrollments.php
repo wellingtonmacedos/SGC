@@ -84,6 +84,7 @@ foreach ($enrollments as $enr) {
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form method="post" action="index.php?r=admin/enrollments&action=create">
+                    <input type="hidden" name="csrf_token" value="<?php echo e(csrfToken()); ?>">
                     <div class="modal-body p-4">
                         <div class="mb-3">
                             <label class="form-label fw-bold text-secondary small text-uppercase">Candidato</label>
@@ -91,7 +92,7 @@ foreach ($enrollments as $enr) {
                                 <option value="">Selecione o candidato...</option>
                                 <?php foreach ($candidates as $candidate): ?>
                                     <option value="<?php echo $candidate['id']; ?>">
-                                        <?php echo e($candidate['name']); ?> (<?php echo e($candidate['cpf']); ?>)
+                                        <?php echo e($candidate['name']); ?> (<?php echo e(maskCpf($candidate['cpf'] ?? '')); ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>

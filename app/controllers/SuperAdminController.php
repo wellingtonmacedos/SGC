@@ -54,6 +54,7 @@ class SuperAdminController extends Controller
     {
         $error = null;
         if ($this->isPost()) {
+            $this->requireCsrf();
             $name = $this->getPostString('name');
             $email = $this->getPostString('email');
             $cpf = $this->getPostString('cpf');
@@ -107,6 +108,7 @@ class SuperAdminController extends Controller
 
         $error = null;
         if ($this->isPost()) {
+            $this->requireCsrf();
             $name = $this->getPostString('name');
             $email = $this->getPostString('email');
             $cpf = $this->getPostString('cpf');
@@ -434,6 +436,8 @@ class SuperAdminController extends Controller
         $hasCertificate = isset($_GET['has_certificate']) && $_GET['has_certificate'] !== '' ? (int)$_GET['has_certificate'] : null;
         
         $data = $enrollmentModel->getReportStats($startDate, $endDate, $courseId, $status, $hasCertificate);
+        $logModel = new Log();
+        $logModel->create('report_export', "Exportação de relatórios (Formato: $format, Período: $startDate a $endDate)", (int)Auth::user()['id']);
 
         if ($format === 'csv') {
             header('Content-Type: text/csv; charset=utf-8');
@@ -501,6 +505,11 @@ class SuperAdminController extends Controller
 
     public function runUpdate(): void
     {
+        if (!$this->isPost()) {
+            header('Location: index.php?r=superAdmin/updates');
+            exit;
+        }
+        $this->requireCsrf();
         try {
             $migrator = new \App\Core\Migrator();
             $basePath = dirname(__DIR__, 2);
@@ -531,6 +540,7 @@ class SuperAdminController extends Controller
         $error = null;
 
         if ($this->isPost()) {
+            $this->requireCsrf();
             $data = [
                 'login_title' => $this->getPostString('login_title'),
                 'login_subtitle' => $this->getPostString('login_subtitle'),
