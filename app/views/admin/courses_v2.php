@@ -277,7 +277,7 @@ function jsonSafe(array $data): string {
                         
                         <div class="col-md-6">
                             <label class="form-label">Imagem de Capa</label>
-                            <input type="file" name="cover" class="form-control" accept="image/jpeg,image/png,image/webp">
+                            <input type="file" name="cover_image" class="form-control" accept="image/jpeg,image/png,image/webp">
                             <div class="form-text">JPG, PNG ou WEBP. Deixe em branco para manter a atual.</div>
                         </div>
                         
