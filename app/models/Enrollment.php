@@ -50,7 +50,7 @@ class Enrollment extends Model
 
     public function listByUser(int $userId): array
     {
-        $stmt = $this->db->prepare('SELECT e.id, e.status, e.course_id, e.created_at, c.name AS course_name, c.workload, c.instructor, c.location AS course_location FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE e.user_id = :user_id ORDER BY c.name');
+        $stmt = $this->db->prepare('SELECT e.id, e.status, e.course_id, e.created_at, c.name AS course_name, c.workload, c.instructor, c.location AS course_location, c.has_certificate FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE e.user_id = :user_id ORDER BY c.name');
         $stmt->execute(['user_id' => $userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -112,9 +112,9 @@ class Enrollment extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getReportStats(string $startDate, string $endDate, ?int $courseId = null, ?string $status = null): array
+    public function getReportStats(string $startDate, string $endDate, ?int $courseId = null, ?string $status = null, ?int $hasCertificate = null): array
     {
-        $sql = "SELECT e.*, c.name as course_name, u.name as user_name, u.email, u.cpf 
+        $sql = "SELECT e.*, c.name as course_name, c.has_certificate, u.name as user_name, u.email, u.cpf 
                 FROM enrollments e 
                 JOIN courses c ON c.id = e.course_id 
                 JOIN users u ON u.id = e.user_id 
@@ -130,6 +130,11 @@ class Enrollment extends Model
         if ($status) {
             $sql .= " AND e.status = :status";
             $params['status'] = $status;
+        }
+
+        if ($hasCertificate !== null) {
+            $sql .= " AND c.has_certificate = :has_certificate";
+            $params['has_certificate'] = $hasCertificate;
         }
         
         $sql .= " ORDER BY e.created_at DESC";

@@ -12,6 +12,49 @@ if (!function_exists('e')) {
     }
 }
 
+if (!function_exists('csrfToken')) {
+    function csrfToken(): string
+    {
+        return isset($_SESSION['csrf_token']) ? (string)$_SESSION['csrf_token'] : '';
+    }
+}
+
+if (!function_exists('maskCpf')) {
+    function maskCpf(?string $cpf): string
+    {
+        $cpf = preg_replace('/[^0-9]/', '', (string)$cpf);
+        if (strlen($cpf) !== 11) {
+            return $cpf;
+        }
+        return '***.***.' . substr($cpf, 6, 3) . '-' . substr($cpf, 9, 2);
+    }
+}
+
+if (!function_exists('maskEmail')) {
+    function maskEmail(?string $email): string
+    {
+        $email = (string)$email;
+        if ($email === '' || strpos($email, '@') === false) {
+            return $email;
+        }
+        [$local, $domain] = explode('@', $email, 2);
+        $localMasked = substr($local, 0, 2) . str_repeat('*', max(0, strlen($local) - 2));
+        return $localMasked . '@' . $domain;
+    }
+}
+
+if (!function_exists('maskPhone')) {
+    function maskPhone(?string $phone): string
+    {
+        $digits = preg_replace('/[^0-9]/', '', (string)$phone);
+        if ($digits === '') {
+            return '';
+        }
+        $end = substr($digits, -4);
+        return str_repeat('*', max(0, strlen($digits) - 4)) . $end;
+    }
+}
+
 if (!function_exists('formatDateBr')) {
     function formatDateBr(?string $value): string
     {

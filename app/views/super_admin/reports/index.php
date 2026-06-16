@@ -9,8 +9,8 @@
                 <i class="fas fa-download me-2"></i>Exportar
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="index.php?r=superAdmin/exportReports&format=csv&start_date=<?= $filters['start_date'] ?>&end_date=<?= $filters['end_date'] ?>&course_id=<?= $filters['course_id'] ?>&status=<?= $filters['status'] ?>"><i class="fas fa-file-csv me-2"></i>CSV (Excel)</a></li>
-                <li><a class="dropdown-item" href="index.php?r=superAdmin/exportReports&format=pdf&start_date=<?= $filters['start_date'] ?>&end_date=<?= $filters['end_date'] ?>&course_id=<?= $filters['course_id'] ?>&status=<?= $filters['status'] ?>" target="_blank"><i class="fas fa-print me-2"></i>Imprimir / PDF</a></li>
+                <li><a class="dropdown-item" href="index.php?r=superAdmin/exportReports&format=csv&start_date=<?= $filters['start_date'] ?>&end_date=<?= $filters['end_date'] ?>&course_id=<?= $filters['course_id'] ?>&status=<?= $filters['status'] ?>&has_certificate=<?= $filters['has_certificate'] ?>"><i class="fas fa-file-csv me-2"></i>CSV (Excel)</a></li>
+                <li><a class="dropdown-item" href="index.php?r=superAdmin/exportReports&format=pdf&start_date=<?= $filters['start_date'] ?>&end_date=<?= $filters['end_date'] ?>&course_id=<?= $filters['course_id'] ?>&status=<?= $filters['status'] ?>&has_certificate=<?= $filters['has_certificate'] ?>" target="_blank"><i class="fas fa-print me-2"></i>Imprimir / PDF</a></li>
             </ul>
         </div>
     </div>

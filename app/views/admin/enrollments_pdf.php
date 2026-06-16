@@ -67,6 +67,7 @@ $orgSettings = $orgSettings ?? [];
         <strong>Instrutor:</strong> <?php echo htmlspecialchars($course['instructor']); ?><br>
         <strong>Período:</strong> <?php echo htmlspecialchars($course['period']); ?> 
         <?php if (!empty($course['date'])): ?> (<?php echo date('d/m/Y', strtotime($course['date'])); ?>)<?php endif; ?><br>
+        <strong>Certificado:</strong> <?php echo !empty($course['has_certificate']) ? 'Sim' : 'Não'; ?><br>
         <strong>Total de Inscritos:</strong> <?php echo count($enrollments); ?>
     </p>
 

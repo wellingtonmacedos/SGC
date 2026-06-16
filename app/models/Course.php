@@ -10,7 +10,7 @@ class Course extends Model
 {
     public function create(array $data): int
     {
-        $stmt = $this->db->prepare('INSERT INTO courses (name, description, target_audience, workload, instructor, period, date, time, location, cover_image, status, allow_enrollment, max_enrollments, created_at) VALUES (:name, :description, :target_audience, :workload, :instructor, :period, :date, :time, :location, :cover_image, :status, :allow_enrollment, :max_enrollments, NOW())');
+        $stmt = $this->db->prepare('INSERT INTO courses (name, description, target_audience, workload, instructor, period, date, time, location, cover_image, status, allow_enrollment, max_enrollments, min_age, has_certificate, created_at) VALUES (:name, :description, :target_audience, :workload, :instructor, :period, :date, :time, :location, :cover_image, :status, :allow_enrollment, :max_enrollments, :min_age, :has_certificate, NOW())');
         $stmt->execute([
             'name' => $data['name'],
             'description' => $data['description'],
@@ -25,13 +25,15 @@ class Course extends Model
             'status' => $data['status'],
             'allow_enrollment' => $data['allow_enrollment'],
             'max_enrollments' => !empty($data['max_enrollments']) ? $data['max_enrollments'] : 0,
+            'min_age' => !empty($data['min_age']) ? $data['min_age'] : null,
+            'has_certificate' => isset($data['has_certificate']) ? $data['has_certificate'] : 1,
         ]);
         return (int)$this->db->lastInsertId();
     }
 
     public function update(int $id, array $data): void
     {
-        $stmt = $this->db->prepare('UPDATE courses SET name = :name, description = :description, target_audience = :target_audience, workload = :workload, instructor = :instructor, period = :period, date = :date, time = :time, location = :location, cover_image = :cover_image, status = :status, allow_enrollment = :allow_enrollment, max_enrollments = :max_enrollments WHERE id = :id');
+        $stmt = $this->db->prepare('UPDATE courses SET name = :name, description = :description, target_audience = :target_audience, workload = :workload, instructor = :instructor, period = :period, date = :date, time = :time, location = :location, cover_image = :cover_image, status = :status, allow_enrollment = :allow_enrollment, max_enrollments = :max_enrollments, min_age = :min_age, has_certificate = :has_certificate WHERE id = :id');
         $stmt->execute([
             'id' => $id,
             'name' => $data['name'],
@@ -47,6 +49,8 @@ class Course extends Model
             'status' => $data['status'],
             'allow_enrollment' => $data['allow_enrollment'],
             'max_enrollments' => !empty($data['max_enrollments']) ? $data['max_enrollments'] : 0,
+            'min_age' => !empty($data['min_age']) ? $data['min_age'] : null,
+            'has_certificate' => isset($data['has_certificate']) ? $data['has_certificate'] : 1,
         ]);
     }
 
@@ -97,6 +101,11 @@ class Course extends Model
             $params['status'] = $filters['status'];
         }
 
+        if (isset($filters['has_certificate'])) {
+            $where[] = 'c.has_certificate = :has_certificate';
+            $params['has_certificate'] = $filters['has_certificate'];
+        }
+
         $whereSql = '';
         if (!empty($where)) {
             $whereSql = 'WHERE ' . implode(' AND ', $where);
@@ -137,6 +146,11 @@ class Course extends Model
         if (!empty($filters['status'])) {
             $where[] = 'status = :status';
             $params['status'] = $filters['status'];
+        }
+
+        if (isset($filters['has_certificate'])) {
+            $where[] = 'has_certificate = :has_certificate';
+            $params['has_certificate'] = $filters['has_certificate'];
         }
 
         $whereSql = '';
